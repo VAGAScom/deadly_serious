@@ -4,7 +4,8 @@ require 'deadly_serious/engine/channel'
 module DeadlySerious
   module Engine
     class Spawner
-      def initialize(pipe_dir: "/tmp/deadly_serious/#{Process.pid}", preserve_pipe_dir: false)
+      def initialize(data_dir: './data', pipe_dir: "/tmp/deadly_serious/#{Process.pid}", preserve_pipe_dir: false)
+        @data_dir = data_dir
         @pipe_dir = pipe_dir
         @ids = []
 
@@ -23,16 +24,20 @@ module DeadlySerious
         $0 = "ruby #{self.class.dasherize(name)}"
       end
 
+      def channel_for(pipe_name)
+        Channel.new(pipe_name, data_dir: @data_dir, pipe_dir: @pipe_dir)
+      end
+
       def create_pipe(pipe_name)
-        Channel.new(pipe_name, dir: @pipe_dir).create
+        channel_for(pipe_name).create
       end
 
       def read_pipe(pipe_name)
-        Channel.new(pipe_name, dir: @pipe_dir).open_reader
+        channel_for(pipe_name).open_reader
       end
 
       def write_pipe(pipe_name)
-        channel = Channel.new(pipe_name, dir: @pipe_dir)
+        channel = channel_for(pipe_name)
         return channel.open_writer unless block_given?
 
         channel.open_writer do |io|

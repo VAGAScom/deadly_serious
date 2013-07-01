@@ -1,11 +1,15 @@
 module DeadlySerious
   module Engine
     class Channel
-      def initialize(name, dir: nil)
+      def initialize(name, data_dir: nil, pipe_dir: nil)
         matcher = name.match(/^(>?)(.*)$/)
         @type = matcher[1] == '>' ? :file : :pipe
         name = matcher[2]
-        @io_name = "#{dir}/#{name}"
+        @io_name = if @type == :file
+                     "#{data_dir}/#{name}"
+                   else
+                     "#{pipe_dir}/#{name}"
+                   end
       end
 
       def create
