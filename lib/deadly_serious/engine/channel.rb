@@ -18,10 +18,12 @@ module DeadlySerious
       end
 
       def open_reader
+        fail %(File "#{@io_name}" not found) unless File.exist?(@io_name)
         open(@io_name, 'r')
       end
 
       def open_writer
+        fail %(File "#{@io_name}" not found) unless File.exist?(@io_name)
         open(@io_name, 'w')
       end
     end

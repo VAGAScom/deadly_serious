@@ -16,7 +16,7 @@ module DeadlySerious
       end
 
       def self.dasherize(a_string)
-        a_string.gsub(/[A-Z]/, '-\1').downcase.gsub(/\W+/, '-')
+        a_string.gsub(/(.)([A-Z])/, '\1-\2').downcase.gsub(/\W+/, '-')
       end
 
       def set_process_name(name)
@@ -50,6 +50,11 @@ module DeadlySerious
         @ids.each { |id| Process.wait(id) }
       end
 
+      def kill_children
+        @ids.each { |id| Process.kill('SIGTERM', id) }
+        Process.wait
+      end
+
       def spawn_source(a_class, *args, writer: self.class.dasherize(a_class.name))
         create_pipe(writer)
         fork_it do
@@ -77,8 +82,10 @@ module DeadlySerious
 
       def run
         run_pipeline
-      ensure
         wait_children
+      rescue Exception => e
+        kill_children
+        raise e
       end
     end
   end
