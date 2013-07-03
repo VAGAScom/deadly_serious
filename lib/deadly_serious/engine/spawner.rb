@@ -57,7 +57,7 @@ module DeadlySerious
 
       def kill_children
         @ids.each { |id| Process.kill('SIGTERM', id) }
-        Process.wait
+        wait_children
       end
 
       def spawn_source(a_class, *args, writer: self.class.dasherize(a_class.name))
