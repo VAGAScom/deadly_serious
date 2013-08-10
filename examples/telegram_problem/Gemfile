@@ -1,3 +1,3 @@
 source "https://rubygems.org"
 
-gem 'deadly_serious', path: '/home/dev/workspace/ruby/deadly_serious'
+gem 'deadly_serious', path: '../..'
