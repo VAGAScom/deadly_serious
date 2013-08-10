@@ -8,13 +8,13 @@ module DeadlySerious
         reader.each { |packet| super(packet.chomp) }
       end
 
-      def send(packet)
+      def send(packet = nil)
         send_buffered(packet)
         flush_buffer
       end
 
-      def send_buffered(packet)
-        @writer << packet
+      def send_buffered(packet = nil)
+        @writer << packet if packet
         @writer << "\n"
       end
 
