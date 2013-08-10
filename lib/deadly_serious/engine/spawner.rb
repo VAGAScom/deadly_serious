@@ -85,6 +85,15 @@ module DeadlySerious
         end
       end
 
+      def spawn_command(a_shell_command)
+        command = a_shell_command.dup
+        a_shell_command.scan(/\(\((.*?)\)\)/) do |(pipe_name)|
+          pipe_path = create_pipe(pipe_name)
+          command.gsub!("((#{pipe_name}))", pipe_path)
+        end
+        @ids << spawn(command)
+      end
+
       def run
         run_pipeline
         wait_children

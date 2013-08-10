@@ -12,13 +12,16 @@ module DeadlySerious
                    end
       end
 
+      # Create a pipe or file (acording to name)
+      # and returns the full name of the thing created.
       def create
-        return if File.exist?(@io_name)
+        return @io_name if File.exist?(@io_name)
         if @type == :file
           `touch #{@io_name}`
         else
           `mkfifo #{@io_name}`
         end
+        @io_name
       end
 
       def open_reader
