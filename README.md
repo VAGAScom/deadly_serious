@@ -8,16 +8,18 @@ This relies on [*named pipes*](http://linux.die.net/man/7/fifo) and *Linux proce
 
 Unlike [NoFlo](http://noflojs.org), this is not a real engine. It just "orchestrates" linux processes and pipes to create a flow based system.
 
-Overall, it's slower than a normal ruby program (the pipes add some overhead). However, there are 3 points where this approach is pretty interesting:
+Overall, it's slower than a normal ruby program (the pipes add some overhead). However, there are 4 points where this approach is pretty interesting:
 
-1. Unbelievably modifiable:
+1. High modifiabilty:
   * The interfaces between each component is tiny and very clear: they are just streams of characteres. I usually use csv format or json when I need more structure than that.
   * You can connect ruby process to anything else that deals with STDIN, STDOUT or files (which includes shell commands, of course).
 2. Cheap parallelism and distributed computation:
   * Each component runs as a separated process. The OS is in charge here (and it does a amazing work running things in parallel).
   * As any shell command can be use as a component, you can use a simple [ncat](http://nmap.org/ncat) (or something similar) to disttribute jobs between different boxes.
   * It's really easy to avoid deadlocks and race conditions with the FBP paradigm.
-3. Very easy to reason about:
+3. Low memory footprint
+  * As each component usually process things as they appear in the pipe, it's easy to crush tons of data using very little memory. Notable exceptions as components that needs to accumulate things to process, like "sort".
+4. Very easy to reason about (personal opinion):
   * Of course, this is not a merit of this gem, but of Flow Based Programming in general. I dare do say (oh, blasphemy!) that Object Oriented and Functional programming paradigms are good ONLY for tiny systems. They make a huge mess on big ones (#prontofalei).
 
 ## Installation
@@ -42,7 +44,7 @@ Create a class that will orchestrate the pipeline:
 
 ```ruby
 #!/usr/bin/env ruby
-# &uarr; Assuming your are using RVM
+# Assuming your are using RVM
 
 class Pipeline < DeadlySerious::Engine::Spawner
   def run_pipeline
@@ -51,7 +53,10 @@ class Pipeline < DeadlySerious::Engine::Spawner
 end
 
 # This line will alow you to run
-# it directly from the shell
+# it directly from the shell.
+#
+# Please, note that you fires the pipeline
+# calling "run" not "run_pipeline".
 Pipeline.new.run if __FILE__ == $0
 ```
 
@@ -95,7 +100,7 @@ The parameters you receive in the "def run(readers: [], writers: [])" method are
 
 They are already opened when they are passed to your component, and they are properly closed when your component is done.
 
-In the Pipeline class, readers and writers are just pipe names *or* file names. If you want to read or write to a file instead of a pipe, prepend its name with ">", like that:
+In the Pipeline class, readers and writers are just pipe names *or* file names. If you want to read or write to a file instead of a pipe, prepend its name with ">", like this:
 
 ```ruby
 spawn_process(YourComponentClass,
@@ -255,9 +260,9 @@ if __FILE__ == $0
 end
 ```
 
-Check the "examples" directory for other examples of use. There's even a version of this Telegram Problem program that's done without pipes and such, but using the same logic. I made it to have a "feeling" of the overhead of using pipes.
+Check the "examples" directory for other examples of use. There's even a version of this Telegram Problem program made without pipes and such, but using the same logic. I made it to have a "feeling" of the overhead of using pipes.
 
-In my findings, the overhead is roughly 50% in this very simple problem (same time, 2x cpu). Considering that each of the components above are *really* simple (just split, join words and an "if"), I found the overhead is incredible low. However, I need to more tests.
+In my findings, the overhead is roughly 100% in this very simple problem (same time, 2x cpu). Considering that each of the components above are *really* simple (just split, join words and an "if" and 2 pipes), I found the overhead not a great deal. However, I need more tests.
 
 ## Future features (a.k.a. "The Wishlist")
 
