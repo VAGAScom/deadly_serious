@@ -16,48 +16,12 @@ module DeadlySerious
         end
       end
 
-      def self.dasherize(a_string)
-        a_string.gsub(/(.)([A-Z])/, '\1-\2').downcase.gsub(/\W+/, '-')
-      end
-
-      def set_process_name(name)
-        $0 = "ruby #{self.class.dasherize(name)}"
-      end
-
-      def channel_for(pipe_name)
-        Channel.new(pipe_name, data_dir: @data_dir, pipe_dir: @pipe_dir)
-      end
-
-      def create_pipe(pipe_name)
-        channel_for(pipe_name).create
-      end
-
-      def read_pipe(pipe_name)
-        channel_for(pipe_name).open_reader
-      end
-
-      def write_pipe(pipe_name)
-        channel = channel_for(pipe_name)
-        return channel.open_writer unless block_given?
-
-        channel.open_writer do |io|
-          yield io
-        end
-      end
-
-      def fork_it
-        @ids << fork do
-          yield
-        end
-      end
-
-      def wait_children
-        @ids.each { |id| Process.wait(id) }
-      end
-
-      def kill_children
-        @ids.each { |id| Process.kill('SIGTERM', id) }
+      def run
+        run_pipeline
         wait_children
+      rescue Exception => e
+        kill_children
+        raise e
       end
 
       def spawn_source(a_class, *args, writer: self.class.dasherize(a_class.name))
@@ -94,12 +58,58 @@ module DeadlySerious
         @ids << spawn(command)
       end
 
-      def run
-        run_pipeline
+      private
+
+      # @!group Process Control
+
+      def fork_it
+        @ids << fork do
+          yield
+        end
+      end
+
+      def wait_children
+        @ids.each { |id| Process.wait(id) }
+      end
+
+      def kill_children
+        @ids.each { |id| Process.kill('SIGTERM', id) }
         wait_children
-      rescue Exception => e
-        kill_children
-        raise e
+      end
+
+      def set_process_name(name)
+        $0 = "ruby #{self.class.dasherize(name)}"
+      end
+
+      # @!endgroup
+      # @!group Channel Helpers
+
+      def channel_for(pipe_name)
+        Channel.new(pipe_name, data_dir: @data_dir, pipe_dir: @pipe_dir)
+      end
+
+      def create_pipe(pipe_name)
+        channel_for(pipe_name).create
+      end
+
+      def read_pipe(pipe_name)
+        channel_for(pipe_name).open_reader
+      end
+
+      def write_pipe(pipe_name)
+        channel = channel_for(pipe_name)
+        return channel.open_writer unless block_given?
+
+        channel.open_writer do |io|
+          yield io
+        end
+      end
+
+      # @!endgroup
+      # @!group Minor Helpers
+
+      def self.dasherize(a_string)
+        a_string.gsub(/(.)([A-Z])/, '\1-\2').downcase.gsub(/\W+/, '-')
       end
     end
   end
