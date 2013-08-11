@@ -1,6 +1,7 @@
 require 'deadly_serious'
 
 module TelegramProblem
+  LINE_SIZE = 80
   PARAGRAPH_PACKET = 'CONTROL PACKET: paragraph'
   EOL_PACKET = 'CONTROL PACKET: end of line'
 
@@ -20,7 +21,7 @@ module TelegramProblem
     end
   end
 
-  # Transforme double "end of line" in "paragraph"
+  # Transform double "end of line" in "paragraph"
   class EolToParagraph
     def run(readers: [], writers: [])
       reader = readers.first
@@ -30,8 +31,6 @@ module TelegramProblem
       last1 = ''
       reader.each do |packet|
         packet.chomp!
-
-        #puts "[#{packet}]"
 
         if packet == EOL_PACKET
           last2 = last1
@@ -61,15 +60,13 @@ module TelegramProblem
       reader.each do |packet|
         packet.chomp!
 
-        #puts "[#{packet}]"
-
         if packet == PARAGRAPH_PACKET
           writer << "\n\n"
           line_size = 0
           next
         end
 
-        if line_size + packet.size + 1 <= 80
+        if line_size + packet.size + 1 <= LINE_SIZE
           writer << ' ' if line_size > 0
           writer << packet
           line_size += packet.size + 1
