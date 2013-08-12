@@ -7,13 +7,10 @@ module DeadlySerious
       def initialize(data_dir: './data', pipe_dir: "/tmp/deadly_serious/#{Process.pid}", preserve_pipe_dir: false)
         @data_dir = data_dir
         @pipe_dir = pipe_dir
+        @preserve_pipe_dir = preserve_pipe_dir
         @ids = []
 
         FileUtils.mkdir_p(pipe_dir) unless File.exist?(pipe_dir)
-
-        unless preserve_pipe_dir
-          at_exit { FileUtils.rm_r(pipe_dir, force: true, secure: true) }
-        end
       end
 
       def run
@@ -22,6 +19,10 @@ module DeadlySerious
       rescue Exception => e
         kill_children
         raise e
+      ensure
+        if !@preserve_pipe_dir && File.exist?(@pipe_dir)
+          FileUtils.rm_r(@pipe_dir, force: true, secure: true)
+        end
       end
 
       def spawn_source(a_class, *args, writer: self.class.dasherize(a_class.name))
