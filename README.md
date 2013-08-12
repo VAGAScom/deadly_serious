@@ -11,14 +11,14 @@ Unlike [NoFlo](http://noflojs.org), this is not a real engine. It just "orchestr
 Overall, it's slower than a normal ruby program (the pipes add some overhead). However, there are 4 points where this approach is pretty interesting:
 
 1. High modifiabilty:
-  * The interfaces between each component is tiny and very clear: they are just streams of characteres. I usually use csv format or json when I need more structure than that.
-  * You can connect ruby process to anything else that deals with STDIN, STDOUT or files (which includes shell commands, of course).
+  * The interface between each component is tiny and very clear: it's just a stream of characteres. I usually use csv format or json when I need more structure than that.
+  * You can connect ruby process to anything that deals with STDIN, STDOUT or files (which includes shell commands, of course).
 2. Cheap parallelism and distributed computation:
-  * Each component runs as a separated process. The OS is in charge here (and it does a amazing work running things in parallel).
-  * As any shell command can be use as a component, you can use a simple [ncat](http://nmap.org/ncat) (or something similar) to disttribute jobs between different boxes.
+  * Each component runs as a separated process. The OS is in charge here (and it does an amazing work running things in parallel).
+  * As any shell command can be used as a component, you can use a simple [ncat](http://nmap.org/ncat) (or something similar) to distribute jobs between different boxes.
   * It's really easy to avoid deadlocks and race conditions with the FBP paradigm.
 3. Low memory footprint
-  * As each component usually process things as they appear in the pipe, it's easy to crush tons of data using very little memory. Notable exceptions as components that needs to accumulate things to process, like "sort".
+  * As each component usually process things as they appear in the pipe, it's easy to crush tons of data with very low memory. Notable exceptions as components that needs to accumulate things to process, like "sort".
 4. Very easy to reason about (personal opinion):
   * Of course, this is not a merit of this gem, but of Flow Based Programming in general. I dare do say (oh, blasphemy!) that Object Oriented and Functional programming paradigms are good ONLY for tiny systems. They make a huge mess on big ones (#prontofalei).
 
