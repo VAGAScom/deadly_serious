@@ -81,11 +81,18 @@ module TelegramProblem
   end
 
   class Pipeline < DeadlySerious::Engine::Spawner
-    include DeadlySerious
     def run_pipeline
-      spawn_process(WordSplitter, readers: ['>war_and_peace.txt'], writers: ['words_and_eol'])
-      spawn_process(EolToParagraph, readers: ['words_and_eol'], writers: ['just_words'])
-      spawn_process(SentenceJoiner, readers: ['just_words'], writers: ['>output.data'])
+      spawn_process(WordSplitter,
+                    readers: ['>war_and_peace.txt'],
+                    writers: ['words_and_eol'])
+
+      spawn_process(EolToParagraph,
+                    readers: ['words_and_eol'],
+                    writers: ['just_words'])
+
+      spawn_process(SentenceJoiner,
+                    readers: ['just_words'],
+                    writers: ['>output.data'])
     end
   end
 end
