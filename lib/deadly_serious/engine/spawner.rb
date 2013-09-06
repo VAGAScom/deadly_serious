@@ -23,15 +23,6 @@ module DeadlySerious
         Channel.teardown
       end
 
-      def spawn_source(a_class, *args, writer: a_class.dasherize(a_class.name))
-        create_pipe(writer)
-        fork_it do
-          set_process_name(a_class.name)
-          append_open_io_if_needed(a_class)
-          a_class.new.run(io, *args)
-        end
-      end
-
       def spawn_process(a_class, *args, process_name: a_class.name, readers: [], writers: [])
         writers.each { |writer| create_pipe(writer) }
         fork_it do
@@ -41,26 +32,42 @@ module DeadlySerious
         end
       end
 
-      def spawn_splitter(reader: nil, writer: '>output01.txt', number: 2)
-        last_number_pattern = /(\d+)[^\d]*$/.match(writer)
-        raise %(Writer name "#{writer}" should have a number) if last_number_pattern.nil?
+      def spawn_processes(a_class, *args, process_name: a_class.name, reader_pattern: nil, writers: [])
+        number = last_number(reader_pattern)
 
-        pattern = last_number_pattern[1]
-        start = pattern.to_i
-        finish = start + number - 1
-        pattern_length = pattern.size
-        find_pattern = /#{pattern}([^\d]*)$/
-        replace_pattern = "%0.#{pattern_length}d\\1"
-
-        writers = (start..finish).map do |index|
-          writer.sub(find_pattern, sprintf(replace_pattern, index))
+        loop do
+          this_reader = pattern_replace(reader_pattern, number)
+          break unless Channel.exists?(this_reader)
+          spawn_process(a_class,
+                        *args,
+                        process_name: process_name,
+                        readers: [this_reader],
+                        writers: Array(writers))
+          number += 1
         end
-
-        spawn_process(Processes::Splitter, readers: Array(reader), writers: writers)
       end
 
-      def spawn_socket_splitter(reader: nil, port: 11000, number: 2)
-        spawn_splitter(reader: reader, writer: "localhost:#{port}", number: number)
+      def spawn_source(a_class, *args, writer: a_class.dasherize(a_class.name))
+        spawn_process(a_class, *args, process_name: process_name, readers: [], writers: [writer])
+      end
+
+      def spawn_splitter(process_name: 'Splitter', reader: nil, writer: '>output01.txt', number: 2)
+        start = last_number(writer)
+        finish = start + number - 1
+
+        writers = (start..finish).map { |index| pattern_replace(writer, index) }
+
+        spawn_process(Processes::Splitter,
+                      process_name: process_name,
+                      readers: Array(reader),
+                      writers: writers)
+      end
+
+      def spawn_socket_splitter(process_name: 'SocketSplitter', reader: nil, port: 11000, number: 2)
+        spawn_splitter(process_name: process_name,
+                       reader: reader,
+                       writer: "localhost:#{port}",
+                       number: number)
       end
 
       def spawn_command(a_shell_command)
@@ -106,6 +113,26 @@ module DeadlySerious
 
       def self.dasherize(a_string)
         a_string.gsub(/(.)([A-Z])/, '\1-\2').downcase.gsub(/\W+/, '-')
+      end
+
+      def last_number_pattern(a_string)
+        last_number_pattern = /(\d+)[^\d]*$/.match(a_string)
+        raise %(Writer name "#{writer}" should have a number) if last_number_pattern.nil?
+
+        last_number_pattern[1]
+      end
+
+      def last_number(a_string)
+        last_number_pattern(a_string).to_i
+      end
+
+      def pattern_replace(a_string, number)
+        pattern = last_number_pattern(a_string)
+        pattern_length = pattern.size
+        find_pattern = /#{pattern}([^\d]*)$/
+        replace_pattern = "%0.#{pattern_length}d\\1"
+
+        a_string.sub(find_pattern, sprintf(replace_pattern, number))
       end
     end
   end
