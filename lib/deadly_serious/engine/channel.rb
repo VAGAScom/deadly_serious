@@ -4,15 +4,35 @@ module DeadlySerious
   module Engine
     # Fake class, it's actually a factory ¬¬
     module Channel
-      def self.new(name, data_dir: nil, pipe_dir: nil)
+      def self.new(name)
         matcher = name.match(/^(>)?(.*?)(?:(:)(\d{1,5}))?$/)
         if matcher[1] == '>'
-          FileChannel.new(matcher[2], data_dir)
+          FileChannel.new(matcher[2], @data_dir)
         elsif matcher[3] == ':'
           SocketChannel.new(matcher[2], matcher[4].to_i)
         else
-          PipeChannel.new(matcher[2], pipe_dir)
+          PipeChannel.new(matcher[2], @pipe_dir)
         end
+      end
+
+      def self.config(data_dir, pipe_dir, preserve_pipe_dir)
+        @data_dir = data_dir
+        @pipe_dir = pipe_dir
+        @preserve_pipe_dir = preserve_pipe_dir
+      end
+
+      def self.setup
+        FileUtils.mkdir_p(@pipe_dir) unless File.exist?(@pipe_dir)
+      end
+
+      def self.teardown
+        if !@preserve_pipe_dir && File.exist?(@pipe_dir)
+          FileUtils.rm_r(@pipe_dir, force: true, secure: true)
+        end
+      end
+
+      def self.create_pipe(pipe_name)
+        new(pipe_name).create
       end
     end
 
