@@ -1,5 +1,6 @@
 require 'deadly_serious/engine/channel'
 require 'deadly_serious/engine/open_io'
+require 'deadly_serious/processes/splitter'
 
 module DeadlySerious
   module Engine
@@ -31,13 +32,35 @@ module DeadlySerious
         end
       end
 
-      def spawn_process(a_class, *args, readers: [], writers: [])
+      def spawn_process(a_class, *args, process_name: a_class.name, readers: [], writers: [])
         writers.each { |writer| create_pipe(writer) }
         fork_it do
-          set_process_name(a_class.name)
+          set_process_name(process_name)
           append_open_io_if_needed(a_class)
           a_class.new.run(*args, readers: readers, writers: writers)
         end
+      end
+
+      def spawn_splitter(reader: nil, writer: '>output01.txt', number: 2)
+        last_number_pattern = /(\d+)[^\d]*$/.match(writer)
+        raise %(Writer name "#{writer}" should have a number) if last_number_pattern.nil?
+
+        pattern = last_number_pattern[1]
+        start = pattern.to_i
+        finish = start + number - 1
+        pattern_length = pattern.size
+        find_pattern = /#{pattern}([^\d]*)$/
+        replace_pattern = "%0.#{pattern_length}d\\1"
+
+        writers = (start..finish).map do |index|
+          writer.sub(find_pattern, sprintf(replace_pattern, index))
+        end
+
+        spawn_process(Processes::Splitter, readers: Array(reader), writers: writers)
+      end
+
+      def spawn_socket_splitter(reader: nil, port: 11000, number: 2)
+        spawn_splitter(reader: reader, writer: "localhost:#{port}", number: number)
       end
 
       def spawn_command(a_shell_command)
