@@ -8,8 +8,12 @@ module DeadlySerious
         opened_writers = writers.map { |writer| write_pipe(writer) }
         super(*args, readers: opened_readers, writers: opened_writers)
       ensure
-        opened_writers.each { |writer| writer.close unless writer.closed? }
-        opened_readers.each { |reader| reader.close unless reader.closed? }
+        if opened_writers
+          opened_writers.each { |writer| writer.close unless writer.closed? }
+        end
+        if opened_readers
+          opened_readers.each { |reader| reader.close unless reader.closed? }
+        end
       end
 
       private
