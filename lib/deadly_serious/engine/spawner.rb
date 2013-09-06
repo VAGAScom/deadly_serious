@@ -1,53 +1,73 @@
-require 'fileutils'
 require 'deadly_serious/engine/channel'
+require 'deadly_serious/engine/open_io'
+require 'deadly_serious/processes/splitter'
 
 module DeadlySerious
   module Engine
     class Spawner
-      def initialize(data_dir: './data', pipe_dir: "/tmp/deadly_serious/#{Process.pid}", preserve_pipe_dir: false)
-        @data_dir = data_dir
-        @pipe_dir = pipe_dir
-        @preserve_pipe_dir = preserve_pipe_dir
+      def initialize(data_dir: './data',
+                     pipe_dir: "/tmp/deadly_serious/#{Process.pid}",
+                     preserve_pipe_dir: false)
         @ids = []
-
-        FileUtils.mkdir_p(pipe_dir) unless File.exist?(pipe_dir)
+        Channel.config(data_dir, pipe_dir, preserve_pipe_dir)
       end
 
       def run
+        Channel.setup
         run_pipeline
         wait_children
-      rescue Exception => e
+      rescue => e
         kill_children
         raise e
       ensure
-        if !@preserve_pipe_dir && File.exist?(@pipe_dir)
-          FileUtils.rm_r(@pipe_dir, force: true, secure: true)
-        end
+        Channel.teardown
       end
 
-      def spawn_source(a_class, *args, writer: self.class.dasherize(a_class.name))
-        create_pipe(writer)
-        fork_it do
-          set_process_name(a_class.name)
-          write_pipe(writer) do
-            a_class.new.run(io, *args)
-          end
-        end
-      end
-
-      def spawn_process(a_class, *args, readers: [], writers: [])
+      def spawn_process(a_class, *args, process_name: a_class.name, readers: [], writers: [])
         writers.each { |writer| create_pipe(writer) }
         fork_it do
-          set_process_name(a_class.name)
-          open_readers = readers.map { |reader| read_pipe(reader) }
-          open_writers = writers.map { |writer| write_pipe(writer) }
-          begin
-            a_class.new.run(*args, readers: open_readers, writers: open_writers)
-          ensure
-            open_writers.each { |writer| writer.close unless writer.closed? }
-            open_readers.each { |reader| reader.close unless reader.closed? }
-          end
+          set_process_name(process_name)
+          append_open_io_if_needed(a_class)
+          a_class.new.run(*args, readers: readers, writers: writers)
         end
+      end
+
+      def spawn_processes(a_class, *args, process_name: a_class.name, reader_pattern: nil, writers: [])
+        number = last_number(reader_pattern)
+
+        loop do
+          this_reader = pattern_replace(reader_pattern, number)
+          break unless Channel.exists?(this_reader)
+          spawn_process(a_class,
+                        *args,
+                        process_name: process_name,
+                        readers: [this_reader],
+                        writers: Array(writers))
+          number += 1
+        end
+      end
+
+      def spawn_source(a_class, *args, writer: a_class.dasherize(a_class.name))
+        spawn_process(a_class, *args, process_name: process_name, readers: [], writers: [writer])
+      end
+
+      def spawn_splitter(process_name: 'Splitter', reader: nil, writer: '>output01.txt', number: 2)
+        start = last_number(writer)
+        finish = start + number - 1
+
+        writers = (start..finish).map { |index| pattern_replace(writer, index) }
+
+        spawn_process(Processes::Splitter,
+                      process_name: process_name,
+                      readers: Array(reader),
+                      writers: writers)
+      end
+
+      def spawn_socket_splitter(process_name: 'SocketSplitter', reader: nil, port: 11000, number: 2)
+        spawn_splitter(process_name: process_name,
+                       reader: reader,
+                       writer: "localhost:#{port}",
+                       number: number)
       end
 
       def spawn_command(a_shell_command)
@@ -61,12 +81,18 @@ module DeadlySerious
 
       private
 
+      def append_open_io_if_needed(a_class)
+        a_class.send(:prepend, OpenIo) unless a_class.include?(OpenIo)
+      end
+
+      def create_pipe(pipe_name)
+        Channel.create_pipe(pipe_name)
+      end
+
       # @!group Process Control
 
       def fork_it
-        @ids << fork do
-          yield
-        end
+        @ids << fork { yield }
       end
 
       def wait_children
@@ -83,34 +109,30 @@ module DeadlySerious
       end
 
       # @!endgroup
-      # @!group Channel Helpers
-
-      def channel_for(pipe_name)
-        Channel.new(pipe_name, data_dir: @data_dir, pipe_dir: @pipe_dir)
-      end
-
-      def create_pipe(pipe_name)
-        channel_for(pipe_name).create
-      end
-
-      def read_pipe(pipe_name)
-        channel_for(pipe_name).open_reader
-      end
-
-      def write_pipe(pipe_name)
-        channel = channel_for(pipe_name)
-        return channel.open_writer unless block_given?
-
-        channel.open_writer do |io|
-          yield io
-        end
-      end
-
-      # @!endgroup
       # @!group Minor Helpers
 
       def self.dasherize(a_string)
         a_string.gsub(/(.)([A-Z])/, '\1-\2').downcase.gsub(/\W+/, '-')
+      end
+
+      def last_number_pattern(a_string)
+        last_number_pattern = /(\d+)[^\d]*$/.match(a_string)
+        raise %(Writer name "#{writer}" should have a number) if last_number_pattern.nil?
+
+        last_number_pattern[1]
+      end
+
+      def last_number(a_string)
+        last_number_pattern(a_string).to_i
+      end
+
+      def pattern_replace(a_string, number)
+        pattern = last_number_pattern(a_string)
+        pattern_length = pattern.size
+        find_pattern = /#{pattern}([^\d]*)$/
+        replace_pattern = "%0.#{pattern_length}d\\1"
+
+        a_string.sub(find_pattern, sprintf(replace_pattern, number))
       end
     end
   end
