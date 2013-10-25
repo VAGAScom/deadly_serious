@@ -4,8 +4,8 @@ module DeadlySerious
   module Engine
     module OpenIo
       def run(*args, readers: [], writers:[])
-        opened_readers = readers.map { |reader| read_pipe(reader) }
-        opened_writers = writers.map { |writer| write_pipe(writer) }
+        opened_readers = readers.map { |reader| wrap_io(reader) }
+        opened_writers = writers.map { |writer| wrap_io(writer) }
         super(*args, readers: opened_readers, writers: opened_writers)
       ensure
         if opened_writers
@@ -29,12 +29,8 @@ module DeadlySerious
         puts e.inspect
       end
 
-      def read_pipe(pipe_name)
-        Channel.new(pipe_name).open_reader
-      end
-
-      def write_pipe(pipe_name)
-        Channel.new(pipe_name).open_writer
+      def wrap_io(pipe_name)
+        Channel.new(pipe_name).io
       end
     end
   end

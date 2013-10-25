@@ -1,4 +1,5 @@
 require 'socket'
+require 'deadly_serious/engine/lazy_io'
 
 module DeadlySerious
   module Engine
@@ -55,6 +56,10 @@ module DeadlySerious
         fail %(File "#{@io_name}" not found) unless File.exist?(@io_name)
         open(@io_name, 'w')
       end
+
+      def io
+        LazyIo.new(self)
+      end
     end
 
     class PipeChannel
@@ -75,6 +80,10 @@ module DeadlySerious
       def open_writer
         fail %(Pipe "#{@io_name}" not found) unless File.exist?(@io_name)
         open(@io_name, 'w')
+      end
+
+      def io
+        LazyIo.new(self)
       end
     end
 
@@ -102,6 +111,10 @@ module DeadlySerious
       def open_writer
         server = TCPServer.new(@port)
         server.accept
+      end
+
+      def io
+        LazyIo.new(self)
       end
     end
   end
