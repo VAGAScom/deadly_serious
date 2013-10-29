@@ -1,5 +1,7 @@
 # DeadlySerious
 
+[![Gem Version](https://badge.fury.io/rb/deadly_serious.png)](http://badge.fury.io/rb/deadly_serious)
+
 Flow Based Programming Maestro!
 
 This relies on [*named pipes*](http://linux.die.net/man/7/fifo) and *Linux processes* to create a program. Each component runs as a separate linux process and they exchange information through pipes.
