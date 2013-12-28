@@ -28,6 +28,11 @@ module DeadlySerious
         @io << element
       end
 
+      def eof?
+        open_reader
+        @io.eof?
+      end
+
       def closed?
         @io.nil? || @io.closed?
       end
