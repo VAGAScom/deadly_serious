@@ -28,6 +28,11 @@ module DeadlySerious
         @io.each_cons(qty, &block)
       end
 
+      def each_with_object(object, &block)
+        open_reader
+        @io.each_with_object(object, &block)
+      end
+
       def <<(element)
         open_writer
         @io << element

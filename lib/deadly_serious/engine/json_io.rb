@@ -17,6 +17,10 @@ module DeadlySerious
         end
       end
 
+      def each_with_object(object)
+        @io.each_with_object(object) { |line, object| yield JSON.parse(line), object }
+      end
+
       def <<(value)
         @io << value.to_json << "\n"
       end
