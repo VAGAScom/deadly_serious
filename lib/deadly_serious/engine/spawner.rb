@@ -26,9 +26,15 @@ module DeadlySerious
       def spawn_process(a_class, *args, process_name: a_class.name, readers: [], writers: [])
         writers.each { |writer| create_pipe(writer) }
         fork_it do
-          set_process_name(process_name)
-          append_open_io_if_needed(a_class)
-          a_class.new.run(*args, readers: readers, writers: writers)
+          begin
+            set_process_name(process_name)
+            append_open_io_if_needed(a_class)
+            the_object = a_class.new
+            the_object.run(*args, readers: readers, writers: writers)
+          rescue => e
+            the_object.finalize if the_object.respond_to?(:finalize)
+            raise e
+          end
         end
       end
 
