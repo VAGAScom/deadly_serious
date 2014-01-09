@@ -5,12 +5,13 @@ module DeadlySerious
         reader = readers.first
         @writer = writers.first
 
-        reader.each { |packet| super(packet.chomp) }
-      end
-
-      # Alias to #send
-      def emit(packet = nil)
-        send(packet)
+        if reader
+          reader.each { |packet| super(packet.chomp) }
+        else
+          super()
+        end
+      rescue Errno::EPIPE
+        # Ignore it. We expect that sometimes =)
       end
 
       # Send a packet to the next process
@@ -18,6 +19,8 @@ module DeadlySerious
         send_buffered(packet)
         flush_buffer
       end
+
+      alias :emit :send
 
       # Send a packet to the next process,
       # however, accumulate some of them

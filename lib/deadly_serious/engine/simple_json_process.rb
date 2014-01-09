@@ -3,29 +3,29 @@ require 'deadly_serious/engine/json_io'
 module DeadlySerious
   module Engine
     module SimpleJsonProcess
+
       def run(readers: [], writers: [])
         reader = JsonIo.new(readers.first) unless readers.empty?
         @writer = JsonIo.new(writers.first) unless writers.empty?
 
         if reader
           reader.each do |packet|
-            super(packet)
+            super(*packet)
           end
         else
-          super
+          super()
         end
-      end
-
-      # Alias to #send
-      def emit(packet = nil)
-        send(packet)
+      rescue Errno::EPIPE
+        # Ignore it. We expect that sometimes =)
       end
 
       # Send a packet to the next process
-      def send(packet = nil)
+      def send(*packet)
         raise 'No "writer" defined' unless @writer
-        @writer << packet if packet
+        @writer << packet unless packet.empty?
       end
+
+      alias :emit :send
     end
   end
 end
