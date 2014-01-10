@@ -23,6 +23,10 @@ module DeadlySerious
         Channel.teardown
       end
 
+      def next_step!
+        wait_children
+      end
+
       def spawn_process(a_class, *args, process_name: a_class.name, readers: [], writers: [])
         writers.each { |writer| create_pipe(writer) }
         fork_it do
@@ -103,10 +107,11 @@ module DeadlySerious
 
       def wait_children
         @ids.each { |id| Process.wait(id) }
+        @ids.clear
       end
 
       def kill_children
-        @ids.each { |id| Process.kill('SIGTERM', id) }
+        @ids.each { |id| Process.kill('SIGTERM', id) rescue nil }
         wait_children
       end
 
