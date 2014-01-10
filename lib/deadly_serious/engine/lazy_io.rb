@@ -52,6 +52,10 @@ module DeadlySerious
         @io = nil
       end
 
+      def flush
+        @io.flush unless closed?
+      end
+
       private
 
       def open_reader

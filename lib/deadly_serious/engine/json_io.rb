@@ -24,6 +24,10 @@ module DeadlySerious
       def <<(value)
         @io << value.to_json << "\n"
       end
+
+      def flush
+        @io.flush
+      end
     end
   end
 end
