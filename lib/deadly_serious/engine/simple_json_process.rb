@@ -10,7 +10,11 @@ module DeadlySerious
 
         if reader
           reader.each do |packet|
-            super(*packet)
+            if packet.is_a? Array
+              super(*packet)
+            else
+              super(packet)
+            end
           end
         else
           super()

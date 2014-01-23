@@ -23,7 +23,7 @@ module DeadlySerious
         Channel.teardown
       end
 
-      def next_step!
+      def wait_processes!
         wait_children
       end
 
