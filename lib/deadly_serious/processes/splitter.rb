@@ -6,7 +6,7 @@ module DeadlySerious
       end
       def run(readers: [], writers: [])
         @writers ||= writers
-	reader = readers.first
+        reader = readers.first
         @outputs = @writers.dup
         begin
           reader.each do |line|

@@ -38,6 +38,8 @@ module DeadlySerious
     end
 
     class FileChannel
+      attr_reader :io_name
+
       def initialize(name, directory)
         @io_name = File.join(directory, name)
       end
@@ -63,6 +65,8 @@ module DeadlySerious
     end
 
     class PipeChannel
+      attr_reader :io_name
+
       def initialize(name, directory)
         @io_name = File.join(directory, name)
       end
@@ -91,6 +95,10 @@ module DeadlySerious
       def initialize(host, port)
         @host, @port = host, port
         @retry_counter = 3
+      end
+
+      def io_name
+        "#{@host}@#{@port}"
       end
 
       def create
