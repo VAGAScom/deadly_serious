@@ -61,16 +61,12 @@ module DeadlySerious
       def open_reader
         if closed?
           @io = @channel.open_reader
-        else
-          raise "Cannot open file #{@channel.io_name} to read because it's not closed"
         end
       end
 
       def open_writer
         if closed?
           @io = @channel.open_writer
-        else
-          raise "Cannot open file #{@channel.io_name} to write because it's not closed"
         end
       end
     end
