@@ -31,7 +31,7 @@ module DeadlySerious
         writers.each { |writer| create_pipe(writer) }
         fork_it do
           begin
-            set_process_name(process_name)
+            set_process_name(process_name, readers, writers)
             append_open_io_if_needed(a_class)
             the_object = a_class.new
             the_object.run(*args, readers: readers, writers: writers)
@@ -115,8 +115,8 @@ module DeadlySerious
         wait_children
       end
 
-      def set_process_name(name)
-        $0 = "ruby #{self.class.dasherize(name)}"
+      def set_process_name(name, readers, writers)
+        $0 = "ruby #{self.class.dasherize(name)} <(#{readers.join(' ')}) >(#{writers.join(' ')})"
       end
 
       # @!endgroup
