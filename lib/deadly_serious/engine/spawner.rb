@@ -1,5 +1,6 @@
 require 'deadly_serious/engine/channel'
 require 'deadly_serious/engine/open_io'
+require 'deadly_serious/engine/auto_pipe'
 require 'deadly_serious/processes/splitter'
 
 module DeadlySerious
@@ -9,7 +10,20 @@ module DeadlySerious
                      pipe_dir: "/tmp/deadly_serious/#{Process.pid}",
                      preserve_pipe_dir: false)
         @ids = []
+        @auto_pipe = AutoPipe.new
         Channel.config(data_dir, pipe_dir, preserve_pipe_dir)
+      end
+
+      def on_subnet(&block)
+        @auto_pipe.on_subnet &block
+      end
+
+      def next_pipe
+        @auto_pipe.next
+      end
+
+      def last_pipe
+        @auto_pipe.last
       end
 
       def run
@@ -35,9 +49,10 @@ module DeadlySerious
             append_open_io_if_needed(a_class)
             the_object = a_class.new
             the_object.run(*args, readers: readers, writers: writers)
-          rescue => e
+          rescue Errno::EPIPE # Broken Pipe, no problem
+            # Ignore
+          ensure
             the_object.finalize if the_object.respond_to?(:finalize)
-            raise e
           end
         end
       end
