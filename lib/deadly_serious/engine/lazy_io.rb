@@ -4,13 +4,17 @@ module DeadlySerious
     # Restrict IO class that opens ONLY
     # when trying to read something.
     #
-    # Also, used to reopend lost connections.
+    # Also, used to reopen lost connections.
     #
     # By "restrict", I mean it implements
     # just a few IO operations.
     class LazyIo
       def initialize(channel)
         @channel = channel
+      end
+
+      def filename
+        return @channel.io_name if @channel.respond_to?(:io_name)
       end
 
       def gets
