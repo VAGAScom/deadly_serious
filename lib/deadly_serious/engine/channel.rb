@@ -45,7 +45,7 @@ module DeadlySerious
       end
 
       def create
-        `touch #{@io_name}` unless File.exist?(@io_name)
+        `touch '#{@io_name}'` unless File.exist?(@io_name)
         @io_name
       end
 
@@ -72,7 +72,7 @@ module DeadlySerious
       end
 
       def create
-        `mkfifo #{@io_name}` unless File.exist?(@io_name)
+        `mkfifo '#{@io_name}'` unless File.exist?(@io_name)
         @io_name
       end
 
