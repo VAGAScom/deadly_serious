@@ -99,7 +99,7 @@ module DeadlySerious
         command = a_shell_command.dup
         a_shell_command.scan(/\(\((.*?)\)\)/) do |(pipe_name)|
           pipe_path = create_pipe(pipe_name)
-          command.gsub!("((#{pipe_name}))", pipe_path)
+          command.gsub!("((#{pipe_name}))", "'#{pipe_path.gsub("'", "\\'")}'")
         end
         @ids << spawn(command)
       end
