@@ -6,9 +6,13 @@ require 'deadly_serious/processes/splitter'
 module DeadlySerious
   module Engine
     class Spawner
+      attr_reader :data_dir, :pipe_dir
+
       def initialize(data_dir: './data',
                      pipe_dir: "/tmp/deadly_serious/#{Process.pid}",
                      preserve_pipe_dir: false)
+        @data_dir = data_dir
+        @pipe_dir = pipe_dir
         @ids = []
         @auto_pipe = AutoPipe.new
         Channel.config(data_dir, pipe_dir, preserve_pipe_dir)
