@@ -41,7 +41,13 @@ module DeadlySerious
       attr_reader :io_name
 
       def initialize(name, directory)
-        @io_name = File.join(directory, name)
+        if name =~ /^\//
+          # Absolute file path
+          @io_name = name
+        else
+          # relative file path (relative to data_dir)
+          @io_name = File.join(directory, name)
+        end
       end
 
       def create
