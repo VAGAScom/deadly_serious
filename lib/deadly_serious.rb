@@ -1,4 +1,5 @@
 require 'deadly_serious/version'
+require 'deadly_serious/engine/commands'
 require 'deadly_serious/engine/spawner'
 require 'deadly_serious/engine/base_process'
 require 'deadly_serious/engine/push_pop'

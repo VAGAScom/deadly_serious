@@ -6,6 +6,8 @@ require 'deadly_serious/processes/splitter'
 module DeadlySerious
   module Engine
     class Spawner
+      include DeadlySerious::Engine::Commands
+
       attr_reader :data_dir, :pipe_dir
 
       def initialize(data_dir: './data',
@@ -14,20 +16,7 @@ module DeadlySerious
         @data_dir = data_dir
         @pipe_dir = pipe_dir
         @ids = []
-        @auto_pipe = AutoPipe.new
         Channel.config(data_dir, pipe_dir, preserve_pipe_dir)
-      end
-
-      def on_subnet(&block)
-        @auto_pipe.on_subnet &block
-      end
-
-      def next_pipe
-        @auto_pipe.next
-      end
-
-      def last_pipe
-        @auto_pipe.last
       end
 
       def run
@@ -41,10 +30,21 @@ module DeadlySerious
         Channel.teardown
       end
 
+      # Wait all sub processes to finish before
+      # continue the pipeline.
+      #
+      # Always prefer to use {DeadlySerious::Engine::Commands#spawn_capacitor}
+      # if possible.
       def wait_processes!
         wait_children
       end
 
+      # Spawn a  class in a separated process.
+      #
+      # This is a basic command, use it only if you have
+      # more than one input or output pipe. Otherwise
+      # prefer the simplier {DeadlySerious::Engine::Commands#spawn_class}
+      # method.
       def spawn_process(a_class, *args, process_name: a_class.name, readers: [], writers: [])
         writers.each { |writer| create_pipe(writer) }
         fork_it do
@@ -61,6 +61,16 @@ module DeadlySerious
         end
       end
 
+      def spawn_command(a_shell_command)
+        command = a_shell_command.dup
+        a_shell_command.scan(/\(\((.*?)\)\)/) do |(pipe_name)|
+          pipe_path = create_pipe(pipe_name)
+          command.gsub!("((#{pipe_name}))", "'#{pipe_path.gsub("'", "\\'")}'")
+        end
+        @ids << spawn(command)
+      end
+
+      # @deprecated (Use [Spawner#spawn_process] with [Splitter] instead)
       def spawn_processes(a_class, *args, process_name: a_class.name, reader_pattern: nil, writers: [])
         number = last_number(reader_pattern)
 
@@ -76,10 +86,12 @@ module DeadlySerious
         end
       end
 
+      # @deprecated (Use [Spawner#spawn_process] instead)
       def spawn_source(a_class, *args, writer: a_class.dasherize(a_class.name))
         spawn_process(a_class, *args, process_name: process_name, readers: [], writers: [writer])
       end
 
+      # @deprecated (Use [Spawner#spawn_process] instead)
       def spawn_splitter(process_name: 'Splitter', reader: nil, writer: '>output01.txt', number: 2)
         start = last_number(writer)
         finish = start + number - 1
@@ -92,20 +104,12 @@ module DeadlySerious
                       writers: writers)
       end
 
+      # @deprecated (Use [Spawner#spawn_process] with [Splitter] instead)
       def spawn_socket_splitter(process_name: 'SocketSplitter', reader: nil, port: 11000, number: 2)
         spawn_splitter(process_name: process_name,
                        reader: reader,
                        writer: "localhost:#{port}",
                        number: number)
-      end
-
-      def spawn_command(a_shell_command)
-        command = a_shell_command.dup
-        a_shell_command.scan(/\(\((.*?)\)\)/) do |(pipe_name)|
-          pipe_path = create_pipe(pipe_name)
-          command.gsub!("((#{pipe_name}))", "'#{pipe_path.gsub("'", "\\'")}'")
-        end
-        @ids << spawn(command)
       end
 
       private
@@ -117,8 +121,6 @@ module DeadlySerious
       def create_pipe(pipe_name)
         Channel.create_pipe(pipe_name)
       end
-
-      # @!group Process Control
 
       def fork_it
         @ids << fork { yield }
@@ -138,13 +140,11 @@ module DeadlySerious
         $0 = "ruby #{self.class.dasherize(name)} <(#{readers.join(' ')}) >(#{writers.join(' ')})"
       end
 
-      # @!endgroup
-      # @!group Minor Helpers
-
       def self.dasherize(a_string)
         a_string.gsub(/(.)([A-Z])/, '\1-\2').downcase.gsub(/\W+/, '-')
       end
 
+      # @deprecated
       def last_number_pattern(a_string)
         last_number_pattern = /(\d+)[^\d]*$/.match(a_string)
         raise %(Writer name "#{writer}" should have a number) if last_number_pattern.nil?
@@ -152,10 +152,12 @@ module DeadlySerious
         last_number_pattern[1]
       end
 
+      # @deprecated
       def last_number(a_string)
         last_number_pattern(a_string).to_i
       end
 
+      # @deprecated
       def pattern_replace(a_string, number)
         pattern = last_number_pattern(a_string)
         pattern_length = pattern.size
@@ -166,8 +168,4 @@ module DeadlySerious
       end
     end
   end
-end
-
-if __FILE__ == $0
-  DeadlySerious::Engine::Spawner.new.run
 end
