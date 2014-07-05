@@ -1,0 +1,1 @@
+require 'deadly_serious'
