@@ -1,1 +1,0 @@
-ctags -R . --exclude=.git
