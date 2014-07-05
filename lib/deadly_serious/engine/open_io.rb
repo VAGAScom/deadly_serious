@@ -2,6 +2,8 @@ require 'fileutils'
 
 module DeadlySerious
   module Engine
+    # Wraps the channels with a  {LazyIO} before pass
+    # them to the component.
     module OpenIo
       def run(*args, readers: [], writers:[])
         opened_readers = readers.map { |reader| wrap_io(reader) }

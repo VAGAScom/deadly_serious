@@ -1,5 +1,6 @@
 module DeadlySerious
   module Engine
+    # @deprecated Simplifying, simplifying, simplifying
     module BaseProcess
       def run(readers: [], writers:[])
         reader = readers.first

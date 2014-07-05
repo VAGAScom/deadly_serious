@@ -4,6 +4,8 @@ module DeadlySerious
     # Restrict IO class that opens ONLY
     # when trying to read something.
     #
+    # *This is the object passed to Components.*
+    #
     # Also, used to reopen lost connections.
     #
     # By "restrict", I mean it implements
@@ -13,8 +15,10 @@ module DeadlySerious
         @channel = channel
       end
 
+      # @return [String, nil] the name of the file or pipe,
+      #         nil if it's a socket
       def filename
-        return @channel.io_name if @channel.respond_to?(:io_name)
+        @channel.io_name if @channel.respond_to?(:io_name)
       end
 
       def gets

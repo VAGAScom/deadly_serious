@@ -3,6 +3,7 @@ require 'deadly_serious/engine/base_process'
 
 module DeadlySerious
   module Engine
+    # @deprecated Simplifying, simplifying, simplifying
     module PushPopSend
       include PushPop
       include BaseProcess

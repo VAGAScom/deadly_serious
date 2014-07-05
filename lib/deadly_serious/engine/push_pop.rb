@@ -1,5 +1,6 @@
 module DeadlySerious
   module Engine
+    # @deprecated Simplifying, simplifying, simplifying
     module PushPop
       attr_reader :stack
 

@@ -2,6 +2,8 @@ require 'deadly_serious/engine/json_io'
 
 module DeadlySerious
   module Engine
+
+    # @deprecated Simplifying, simplifying, simplifying
     module SimpleJsonProcess
 
       def run(readers: [], writers: [])
