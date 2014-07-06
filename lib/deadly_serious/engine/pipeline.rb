@@ -5,7 +5,7 @@ require 'deadly_serious/processes/splitter'
 
 module DeadlySerious
   module Engine
-    class Spawner
+    class Pipeline
       include DeadlySerious::Engine::Commands
 
       attr_reader :data_dir, :pipe_dir
