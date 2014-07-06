@@ -4,11 +4,20 @@ include DeadlySerious::Engine
 
 describe Pipeline do
   DELAY = 0.5 # seconds
+  test_file = '/tmp/deadly_serious_test_file'
 
   class TestComponent
     def run(delay = nil, readers:, writers:)
       sleep(delay) if delay
     end
+  end
+
+  before do
+    FileUtils.rm_rf(test_file)
+  end
+
+  after do
+    FileUtils.rm_rf(test_file)
   end
 
   it "runs a Component in it's own children process" do
@@ -57,17 +66,11 @@ describe Pipeline do
   end
 
   it 'spawns linux commands' do
-    file_name = '/tmp/deadly_serious_test_file'
-    begin
-      FileUtils.rm_rf(file_name)
-      pipeline = Pipeline.new do |p|
-        p.spawn_command("touch ((>#{file_name}))")
-      end
-      expect(file_name).to_not exists
-      pipeline.run
-      expect(file_name).to exists
-    ensure
-      FileUtils.rm_rf(file_name)
+    pipeline = Pipeline.new do |p|
+      p.spawn_command("touch ((>#{test_file}))")
     end
+    expect(test_file).to_not exists
+    pipeline.run
+    expect(test_file).to exists
   end
 end
