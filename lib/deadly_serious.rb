@@ -1,6 +1,6 @@
 require 'deadly_serious/version'
 require 'deadly_serious/engine/commands'
-require 'deadly_serious/engine/spawner'
+require 'deadly_serious/engine/pipeline'
 
 # Loading all predefined processes
 Dir[File.join(File.dirname(__FILE__), 'deadly_serious', 'processes', '*.rb')].each do |file|

@@ -15,7 +15,7 @@ module DeadlySerious
                      preserve_pipe_dir: false)
         @data_dir = data_dir
         @pipe_dir = pipe_dir
-        @ids = []
+        @pids = []
         Channel.config(data_dir, pipe_dir, preserve_pipe_dir)
       end
 
@@ -67,7 +67,7 @@ module DeadlySerious
           pipe_path = create_pipe(pipe_name)
           command.gsub!("((#{pipe_name}))", "'#{pipe_path.gsub("'", "\\'")}'")
         end
-        @ids << spawn(command)
+        @pids << spawn(command)
       end
 
       private
@@ -81,16 +81,16 @@ module DeadlySerious
       end
 
       def fork_it
-        @ids << fork { yield }
+        @pids << fork { yield }
       end
 
       def wait_children
-        @ids.each { |id| Process.wait(id) }
-        @ids.clear
+        @pids.each { |pid| Process.wait(pid) }
+        @pids.clear
       end
 
       def kill_children
-        @ids.each { |id| Process.kill('SIGTERM', id) rescue nil }
+        @pids.each { |pid| Process.kill('SIGTERM', pid) rescue nil }
         wait_children
       end
 
