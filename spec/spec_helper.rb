@@ -32,3 +32,16 @@ RSpec::Matchers.define :exists do
     File.exist?(file_name)
   end
 end
+
+RSpec::Matchers.define :have_content do |expected|
+  result = nil
+  match do |file_name|
+    result = open(file_name, 'r') do |f|
+      f.map { |line| JSON.parse(line) }
+    end
+    result == expected
+  end
+  failure_message do |file_name|
+    %(expected "#{file_name}" to have content "#{expected}", but was "#{result}")
+  end
+end

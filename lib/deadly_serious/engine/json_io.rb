@@ -14,7 +14,12 @@ module DeadlySerious
       end
 
       def <<(value)
-        @io << value.to_json << "\n"
+        case value
+          when Hash
+            @io << value.to_json << "\n"
+          else
+            @io << Array(value).to_json << "\n"
+        end
       end
 
       def flush

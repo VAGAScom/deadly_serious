@@ -70,8 +70,8 @@ module DeadlySerious
         spawn_process(DeadlySerious::Processes::Joiner, readers: connect_b, writers: [writer])
       end
 
-      def spawn_lambda(*args, reader: last_pipe, writer: next_pipe, &block)
-        spawn_process(DeadlySerious::Processes::Lambda, *args, block, readers: [reader], writers: [writer])
+      def spawn_lambda(reader: last_pipe, writer: next_pipe, &block)
+        spawn_process(DeadlySerious::Processes::Lambda, block, readers: [reader], writers: [writer])
       end
 
       # Pipe from the last component to a intermediate
