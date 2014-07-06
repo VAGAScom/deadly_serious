@@ -8,20 +8,22 @@ module DeadlySerious
     class Pipeline
       include DeadlySerious::Engine::Commands
 
-      attr_reader :data_dir, :pipe_dir
+      attr_reader :data_dir, :pipe_dir, :pids
 
       def initialize(data_dir: './data',
                      pipe_dir: "/tmp/deadly_serious/#{Process.pid}",
-                     preserve_pipe_dir: false)
+                     preserve_pipe_dir: false,
+                     &block)
         @data_dir = data_dir
         @pipe_dir = pipe_dir
+        @block = block
         @pids = []
         Channel.config(data_dir, pipe_dir, preserve_pipe_dir)
       end
 
       def run
         Channel.setup
-        run_pipeline
+        @block.call(self)
         wait_children
       rescue => e
         kill_children
@@ -50,6 +52,7 @@ module DeadlySerious
         fork_it do
           begin
             set_process_name(process_name, readers, writers)
+            # TODO Change this to not modify "a_class", so we can pass instances too
             append_open_io_if_needed(a_class)
             the_object = a_class.new
             the_object.run(*args, readers: readers, writers: writers)
