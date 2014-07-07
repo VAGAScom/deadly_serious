@@ -74,7 +74,13 @@ module DeadlySerious
       attr_reader :io_name
 
       def initialize(name, directory)
-        @io_name = File.join(directory, name)
+        if name =~ /^\//
+          # Absolute pipe path
+          @io_name = name
+        else
+          # relative pipe path (relative to pipe_dir)
+          @io_name = File.join(directory, name)
+        end
       end
 
       def create

@@ -7,9 +7,20 @@ describe Pipeline do
   test_file = '/tmp/deadly_serious_test_file'
   result_file = '/tmp/deadly_serious_result_file'
 
-  class TestComponent
+  class TestComponentTime
     def run(delay = nil, readers:, writers:)
       sleep(delay) if delay
+    end
+  end
+
+  class TestComponentMultiplyBy2
+    def run(readers:, writers:)
+      reader = JsonIo.new(readers.first)
+      writer = JsonIo.new(writers.first)
+
+      reader.each do |(number)|
+        writer << [number * 2]
+      end
     end
   end
 
@@ -29,7 +40,7 @@ describe Pipeline do
     pipeline = Pipeline.new do |p|
       executed = true
       expect(p.pids.size).to eq 0
-      p.spawn_process(TestComponent)
+      p.spawn_process(TestComponentTime)
       expect(p.pids.size).to eq 1
 
       pid, _ = p.pids
@@ -44,7 +55,7 @@ describe Pipeline do
 
   it 'waits until all children complete' do
     pipeline = Pipeline.new do |p|
-      p.spawn_process(TestComponent, DELAY)
+      p.spawn_process(TestComponentTime, DELAY)
     end
     start = Time.now
     pipeline.run
@@ -54,10 +65,10 @@ describe Pipeline do
 
   it 'spawns children in parallel' do
     pipeline = Pipeline.new do |p|
-      p.spawn_process(TestComponent, DELAY)
-      p.spawn_process(TestComponent, DELAY)
-      p.spawn_process(TestComponent, DELAY)
-      p.spawn_process(TestComponent, DELAY)
+      p.spawn_process(TestComponentTime, DELAY)
+      p.spawn_process(TestComponentTime, DELAY)
+      p.spawn_process(TestComponentTime, DELAY)
+      p.spawn_process(TestComponentTime, DELAY)
     end
     start = Time.now
     pipeline.run
@@ -77,5 +88,29 @@ describe Pipeline do
     expect(test_file).to_not exists
     pipeline.run
     expect(test_file).to exists
+  end
+
+  it 'connects pipes with Component Classes' do
+    create_file(test_file, [[1], [2], [3]])
+    pipeline = Pipeline.new do |p|
+      p.from_file(test_file)
+      p.spawn_process(TestComponentMultiplyBy2)
+      p.spawn_process(TestComponentMultiplyBy2)
+      p.to_file(result_file)
+    end
+    pipeline.run
+    expect(result_file).to have_content [[4], [8], [12]]
+  end
+
+  it 'connects pipes with shell commands' do
+    create_file(test_file, [[1], [2], [3]])
+    pipeline = Pipeline.new do |p|
+      p.from_file(test_file)
+      p.spawn_command(%q(sed -e 's/\[\\([0-9]\\)\]/_\1_/'))
+      p.spawn_command(%q(sed -e 's/.*/["\0"]/'))
+      p.to_file(result_file)
+    end
+    pipeline.run
+    expect(result_file).to have_content [['_1_'], ['_2_'], ['_3_']]
   end
 end

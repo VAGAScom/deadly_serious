@@ -71,7 +71,7 @@ module DeadlySerious
       def spawn_command(a_shell_command, reader: last_pipe, writer: next_pipe)
         input = create_pipe(reader).gsub("'", "\\'")
         output = create_pipe(writer).gsub("'", "\\'")
-        @pids << spawn(a_shell_command + %(<'#{input}') + %(>'#{output}'))
+        @pids << spawn(a_shell_command + %( <'#{input}') + %( >'#{output}'))
       end
 
       private

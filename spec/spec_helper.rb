@@ -1,5 +1,13 @@
 require 'deadly_serious'
 
+def create_file(file_name, an_array)
+  open(file_name, 'w') do |f|
+    an_array.each do |data|
+      f.puts JSON.generate(data)
+    end
+  end
+end
+
 RSpec::Matchers.define :be_running do
   message = nil
   match do |pid|

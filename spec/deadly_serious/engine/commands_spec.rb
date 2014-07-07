@@ -16,14 +16,6 @@ describe Commands do
   end
 
   describe '#spawn_lambda' do
-    def put_in_file(file_name, an_array)
-      open(file_name, 'w') do |f|
-        an_array.each do |data|
-          f.puts JSON.generate(data)
-        end
-      end
-    end
-
     it 'executes a lambda' do
       pipeline = Pipeline.new do |p|
         p.spawn_lambda do
@@ -36,7 +28,7 @@ describe Commands do
     end
 
     it 'transforms when receives reader and writer' do
-      put_in_file(test_file, [[1, 'a'], [2, 'b']])
+      create_file(test_file, [[1, 'a'], [2, 'b']])
       pipeline = Pipeline.new do |p|
         p.from_file(test_file)
         p.spawn_lambda do |reader:, writer:|
@@ -49,7 +41,7 @@ describe Commands do
     end
 
     it 'transforms when receives writer' do
-      put_in_file(test_file, [[1, 'a'], [2, 'b']])
+      create_file(test_file, [[1, 'a'], [2, 'b']])
       pipeline = Pipeline.new do |p|
         p.from_file(test_file)
         p.spawn_lambda do |n, v, writer:|
@@ -62,7 +54,7 @@ describe Commands do
     end
 
     it 'transforms when no writer' do
-      put_in_file(test_file, [[1, 'a'], [2, 'b']])
+      create_file(test_file, [[1, 'a'], [2, 'b']])
       pipeline = Pipeline.new do |p|
         p.from_file(test_file)
         p.spawn_lambda { |n, v| [v, n] }
@@ -73,7 +65,7 @@ describe Commands do
     end
 
     it 'filters when "real true" returns' do
-      put_in_file(test_file, [[1, 'a'], [2, 'b']])
+      create_file(test_file, [[1, 'a'], [2, 'b']])
       pipeline = Pipeline.new do |p|
         p.from_file(test_file)
         p.spawn_lambda { |n, v| n % 2 == 0 }
@@ -84,7 +76,7 @@ describe Commands do
     end
 
     it 'transforms when thruthy, but no "real true" returns' do
-      put_in_file(test_file, [[1, 'a'], [2, 'b']])
+      create_file(test_file, [[1, 'a'], [2, 'b']])
       pipeline = Pipeline.new do |p|
         p.from_file(test_file)
         p.spawn_lambda { |n, v| n % 2 }
@@ -95,7 +87,7 @@ describe Commands do
     end
 
     it 'filters on "nil" values' do
-      put_in_file(test_file, [[nil], ['a_value']])
+      create_file(test_file, [[nil], ['a_value']])
       pipeline = Pipeline.new do |p|
         p.from_file(test_file)
         p.spawn_lambda { |it| it }
