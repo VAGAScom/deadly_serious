@@ -4,8 +4,8 @@ module DeadlySerious
     module Commands
 
       private def auto_pipe
-        @auto_pipe ||= AutoPipe.new
-      end
+                @auto_pipe ||= AutoPipe.new
+              end
 
       def on_subnet(&block)
         auto_pipe.on_subnet &block
@@ -84,16 +84,15 @@ module DeadlySerious
         # Lots of contours to make #last_pipe and and #next_pipe
         # to work correctly.
         reader ||= last_pipe
-        escape ||= next_pipe
         writer ||= next_pipe
 
-        # TODO Validates if an "escape" or a block was provided
-        spawn_command("tee '#{escape.gsub("'", "\\'")}'", reader: reader, writer: writer)
-
-        return unless block_given?
-        on_subnet do
-          spawn_command("tee '#{escape.gsub("'", "\\'")}", reader: reader, writer: next_pipe)
-          block.call
+        if block_given?
+          on_subnet do
+            spawn_command("tee '#{create_pipe(next_pipe)}'", reader: reader, writer: writer)
+            block.call
+          end
+        else
+          spawn_command("tee '#{escape.gsub("'", "\\'")}'", reader: reader, writer: writer)
         end
       end
 
