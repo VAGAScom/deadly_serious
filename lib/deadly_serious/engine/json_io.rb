@@ -10,7 +10,11 @@ module DeadlySerious
       end
 
       def each
-        @io.each { |line| yield JSON.parse(line) }
+        if block_given?
+          @io.each { |line| yield JSON.parse(line) }
+        else
+          @io.each
+        end
       end
 
       def <<(value)
