@@ -47,9 +47,13 @@ module DeadlySerious
       # more than one input or output pipe. Otherwise
       # prefer the simplier {DeadlySerious::Engine::Commands#spawn_class}
       # method.
-      def spawn_process(a_class, *args, process_name: a_class.name, readers: [], writers: [])
+      def spawn_process(a_class, *args, process_name: a_class.name, readers: [last_pipe], writers: [next_pipe])
+        # TODO if we have no readers, alarm! (how about data sources???)
+        # TODO if we have no readers, and this is the first process, read from STDIN
+        # TODO if we have no writers, alarm! (how about data sinks???)
+        # TODO if we have no writers, and this is the last process, read from STDIN
         writers.each { |writer| create_pipe(writer) }
-        fork_it do
+        @pids << fork do
           begin
             set_process_name(process_name, readers, writers)
             # TODO Change this to not modify "a_class", so we can pass instances too
@@ -64,13 +68,10 @@ module DeadlySerious
         end
       end
 
-      def spawn_command(a_shell_command)
-        command = a_shell_command.dup
-        a_shell_command.scan(/\(\((.*?)\)\)/) do |(pipe_name)|
-          pipe_path = create_pipe(pipe_name)
-          command.gsub!("((#{pipe_name}))", "'#{pipe_path.gsub("'", "\\'")}'")
-        end
-        @pids << spawn(command)
+      def spawn_command(a_shell_command, reader: last_pipe, writer: next_pipe)
+        input = create_pipe(reader).gsub("'", "\\'")
+        output = create_pipe(writer).gsub("'", "\\'")
+        @pids << spawn(a_shell_command + %(<'#{input}') + %(>'#{output}'))
       end
 
       private
@@ -81,10 +82,6 @@ module DeadlySerious
 
       def create_pipe(pipe_name)
         Channel.create_pipe(pipe_name)
-      end
-
-      def fork_it
-        @pids << fork { yield }
       end
 
       def wait_children

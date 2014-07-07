@@ -23,14 +23,14 @@ module DeadlySerious
       # the next component.
       def from_file(file_name, writer: next_pipe)
         file = file_name.sub(/^>?(.*)$/, '>\1')
-        spawn_command(%{cat ((#{file})) > ((#{writer}))})
+        spawn_command('cat', reader: file, writer: writer)
       end
 
       # Write a file to "data" dir from the pipe
       # of the last component
       def to_file(file_name, reader: last_pipe)
         file = file_name.sub(/^>?(.*)$/, '>\1')
-        spawn_command(%{cat ((#{reader})) > ((#{file}))})
+        spawn_command('cat', reader: reader, writer: file)
       end
 
       # Read from a specific named pipe.
@@ -38,7 +38,7 @@ module DeadlySerious
       # This is useful after a {#spawn_tee}, sometimes.
       def from_pipe(pipe_name, writer: next_pipe)
         pipe = pipe_name.sub(/^>?/, '')
-        spawn_command(%{cat ((#{pipe})) > ((#{writer}))})
+        spawn_command('cat', reader: pipe, writer: writer)
       end
 
       # Write the output of the last component to
@@ -49,7 +49,7 @@ module DeadlySerious
       # {#spawn_tee} instead.
       def to_pipe(pipe_name, reader: last_pipe)
         pipe = pipe_name.sub(/^>?/, '')
-        spawn_command(%{cat ((#{reader})) > ((#{pipe}))})
+        spawn_command('cat', reader: reader, writer: pipe)
       end
 
       # Spawn a class connected to the last and next components
@@ -88,11 +88,11 @@ module DeadlySerious
         writer ||= next_pipe
 
         # TODO Validates if an "escape" or a block was provided
-        spawn_command(%{cat ((#{reader})) | tee ((#{escape})) > ((#{writer}))})
+        spawn_command("tee '#{escape.gsub("'", "\\'")}'", reader: reader, writer: writer)
 
         return unless block_given?
         on_subnet do
-          spawn_command(%{cat ((#{escape})) > ((#{next_pipe}))})
+          spawn_command("tee '#{escape.gsub("'", "\\'")}", reader: reader, writer: next_pipe)
           block.call
         end
       end
@@ -103,14 +103,10 @@ module DeadlySerious
       def spawn_capacitor(charger_file = nil, reader: last_pipe, writer: next_pipe)
         if charger_file.nil?
           charger_file = ">#{last_pipe}"
-          temp_charger = true
         end
         fail "#{charger_file} must be a file" unless charger_file.start_with?('>')
-        if temp_charger
-          spawn_command("cat ((#{reader})) > ((#{charger_file})); cat ((#{charger_file})) > ((#{writer})); rm ((#{charger_file}))")
-        else
-          spawn_command("cat ((#{reader})) > ((#{charger_file})); cat ((#{charger_file})) > ((#{writer}))")
-        end
+        spawn_command('cat', reader: reader, writer: charger_file)
+        spawn_command('cat', reader: charger_file, writer: writer)
       end
     end
   end
