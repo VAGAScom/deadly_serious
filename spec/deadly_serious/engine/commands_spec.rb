@@ -23,7 +23,7 @@ describe Commands do
       create_file(test_file, [[1, 'a'], [2, 'b']])
       pipeline = Pipeline.new do |p|
         p.from_file(test_file)
-        p.spawn_tee(tee_file)
+        p.spawn_tee('>' + tee_file)
         p.to_file(result_file)
       end
       pipeline.run

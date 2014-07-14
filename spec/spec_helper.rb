@@ -1,4 +1,14 @@
 require 'deadly_serious'
+require 'fileutils'
+
+RSpec.configure do |config|
+  config.before(:each) do
+    FileUtils.mkdir_p '/tmp/deadly_serious/'
+  end
+  config.after(:each) do
+    FileUtils.rm_rf '/tmp/deadly_serious/'
+  end
+end
 
 def create_file(file_name, an_array)
   open(file_name, 'w') do |f|

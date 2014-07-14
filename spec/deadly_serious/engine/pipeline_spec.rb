@@ -106,8 +106,8 @@ describe Pipeline do
     create_file(test_file, [[1], [2], [3]])
     pipeline = Pipeline.new do |p|
       p.from_file(test_file)
-      p.spawn_command(%q(sed -e 's/\[\\([0-9]\\)\]/_\1_/'))
-      p.spawn_command(%q(sed -e 's/.*/["\0"]/'))
+      p.spawn_command('sed -e s/\[\([0-9]\)\]/_\1_/')
+      p.spawn_command('sed -e s/.*/["\0"]/')
       p.to_file(result_file)
     end
     pipeline.run

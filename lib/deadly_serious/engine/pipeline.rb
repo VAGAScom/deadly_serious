@@ -1,3 +1,4 @@
+require 'shellwords'
 require 'deadly_serious/engine/channel'
 require 'deadly_serious/engine/open_io'
 require 'deadly_serious/engine/auto_pipe'
@@ -51,7 +52,7 @@ module DeadlySerious
         # TODO if we have no readers, alarm! (how about data sources???)
         # TODO if we have no readers, and this is the first process, read from STDIN
         # TODO if we have no writers, alarm! (how about data sinks???)
-        # TODO if we have no writers, and this is the last process, read from STDIN
+        # TODO if we have no writers, and this is the last process, write to STDOUT
         writers.each { |writer| create_pipe(writer) }
         @pids << fork do
           begin
@@ -68,10 +69,55 @@ module DeadlySerious
         end
       end
 
-      def spawn_command(a_shell_command, reader: last_pipe, writer: next_pipe)
-        input = create_pipe(reader).gsub("'", "\\'")
-        output = create_pipe(writer).gsub("'", "\\'")
-        @pids << spawn(a_shell_command + %( <'#{input}') + %( >'#{output}'))
+      def spawn_command(a_shell_command, reader: nil, writer: nil, readers: [], writers: [])
+        input_pattern = '((<))'
+        output_pattern = '((>))'
+
+        if reader.nil? && readers.empty?
+          readers << last_pipe
+        elsif reader && readers.empty?
+          readers << reader
+        end
+
+        if writer.nil? && writers.empty?
+          writers << next_pipe
+        elsif writer && writers.empty?
+          writers << writer
+        end
+
+
+        shell_tokens = case a_shell_command
+                         when Array
+                           a_shell_command
+                         else
+                           a_shell_command.to_s.split(/\s+/)
+                       end
+
+        inputs = readers.map { |it| create_pipe(it) }
+        outputs = writers.map { |it| create_pipe(it) }
+
+        tokens = shell_tokens.map do |token|
+          case token
+            when input_pattern
+              inputs.shift || fail('Missing reader')
+            when output_pattern
+              outputs.shift || fail('Missing writer')
+            else
+              token
+          end
+        end
+
+        command = Shellwords.join(tokens)
+
+        if inputs.size == 1
+          command << ' <' << Shellwords.escape(inputs.first)
+        end
+
+        if outputs.size == 1
+          command << ' >' << Shellwords.escape(outputs.first)
+        end
+
+        @pids << spawn(command)
       end
 
       private
