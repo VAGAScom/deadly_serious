@@ -92,7 +92,7 @@ module DeadlySerious
             block.call
           end
         else
-          spawn_command("tee '#{escape.gsub("'", "\\'")}'", reader: reader, writer: writer)
+          spawn_command("tee '#{create_pipe(escape)}'", reader: reader, writer: writer)
         end
       end
 
