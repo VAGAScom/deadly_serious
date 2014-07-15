@@ -2,7 +2,11 @@
 
 [![Gem Version](https://badge.fury.io/rb/deadly_serious.png)](http://badge.fury.io/rb/deadly_serious)
 
+----
+
 **Preparing version 1.0 - all interfaces are broken**
+
+----
 
 Flow Based Programming Maestro!
 
