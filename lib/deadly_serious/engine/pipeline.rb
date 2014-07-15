@@ -103,21 +103,16 @@ module DeadlySerious
             when output_pattern
               outputs.shift || fail('Missing writer')
             else
-              token
+              token.to_s
           end
         end
 
-        command = Shellwords.join(tokens)
+        in_out = {close_others: true,
+                  in: inputs.size == 1 ? [inputs.first, 'r'] : :close,
+                  out: outputs.size == 1 ? [outputs.first, 'w'] : :close}
 
-        if inputs.size == 1
-          command << ' <' << Shellwords.escape(inputs.first)
-        end
-
-        if outputs.size == 1
-          command << ' >' << Shellwords.escape(outputs.first)
-        end
-
-        @pids << spawn(command)
+        description = "#{tokens.join(' ')} #{in_out}"
+        @pids << fork { exec([tokens.first, description], *tokens[1..-1], in_out) }
       end
 
       private
