@@ -126,7 +126,7 @@ module DeadlySerious
       end
 
       def wait_children
-        @pids.each { |pid| Process.wait(pid, Process::WNOHANG) }
+        @pids.each { |pid| Process.wait(pid) }
         @pids.clear
       end
 
