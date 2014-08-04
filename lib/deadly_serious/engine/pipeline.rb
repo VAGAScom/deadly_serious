@@ -111,7 +111,7 @@ module DeadlySerious
                   in: inputs.size == 1 ? [inputs.first, 'r'] : :close,
                   out: outputs.size == 1 ? [outputs.first, 'w'] : :close}
 
-        description = "#{tokens.join(' ')} #{in_out}"
+        description = "#{tokens.first} #{in_out}"
         @pids << fork { exec([tokens.first, description], *tokens[1..-1], in_out) }
       end
 
