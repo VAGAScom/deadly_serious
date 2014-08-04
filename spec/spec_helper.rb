@@ -13,7 +13,7 @@ end
 def create_file(file_name, an_array)
   open(file_name, 'w') do |f|
     an_array.each do |data|
-      f.puts JSON.generate(data)
+      f.puts MultiJson.dump(data)
     end
   end
 end
@@ -55,7 +55,7 @@ RSpec::Matchers.define :have_content do |expected|
   result = nil
   match do |file_name|
     result = open(file_name, 'r') do |f|
-      f.map { |line| JSON.parse(line) }
+      f.map { |line| MultiJson.load(line) }
     end
     result == expected
   end

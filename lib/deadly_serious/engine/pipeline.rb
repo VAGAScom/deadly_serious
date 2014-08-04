@@ -1,9 +1,3 @@
-require 'shellwords'
-require 'deadly_serious/engine/channel'
-require 'deadly_serious/engine/open_io'
-require 'deadly_serious/engine/auto_pipe'
-require 'deadly_serious/processes/splitter'
-
 module DeadlySerious
   module Engine
     class Pipeline

@@ -1,5 +1,3 @@
-require 'json'
-
 module DeadlySerious
   module Engine
     class JsonIo
@@ -11,18 +9,18 @@ module DeadlySerious
 
       def each
         if block_given?
-          @io.each { |line| yield JSON.parse(line) }
+          @io.each { |line| yield MultiJson.load(line) }
         else
-          @io.each
+          @io.lazy.map { |line| MultiJson.load(line) }
         end
       end
 
       def <<(value)
         case value
           when Hash
-            @io << value.to_json << "\n"
+            @io << MultiJson.dump(value) << "\n"
           else
-            @io << Array(value).to_json << "\n"
+            @io << MultiJson.dump(Array(value)) << "\n"
         end
       end
 
