@@ -27,7 +27,7 @@ RSpec::Matchers.define :be_running do
     rescue Errno::EPERM # changed uid
       message = "No permission to query #{pid}!";
     rescue Errno::ESRCH
-      message = "PID #{pid} is NOT running."; # or zombied
+      message = "PID #{pid} is NOT running or is a zombie.";
     rescue
       message = "Unable to determine status for PID #{pid} : #{$!}"
     end

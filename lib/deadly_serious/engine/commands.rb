@@ -4,8 +4,8 @@ module DeadlySerious
     module Commands
 
       private def auto_pipe
-                @auto_pipe ||= AutoPipe.new
-              end
+        @auto_pipe ||= AutoPipe.new
+      end
 
       def on_subnet(&block)
         auto_pipe.on_subnet &block
@@ -75,14 +75,13 @@ module DeadlySerious
       end
 
       # Pipe from the last component to a intermediate
-      # file (or pipe) while continue the process.
+      # file (or pipe) while the processe continue.
       #
       # If a block is provided, it pipes from the last
-      # component INTO the block, while it pipes to the
-      # next component OUT of the block.
+      # component INTO the block.
       def spawn_tee(escape = nil, reader: nil, writer: nil, &block)
-        # Lots of contours to make #last_pipe and and #next_pipe
-        # to work correctly.
+        # Lots of contours to make #last_pipe and
+        # #next_pipe work correctly.
         reader ||= last_pipe
         writer ||= next_pipe
 
@@ -91,23 +90,24 @@ module DeadlySerious
             spawn_command("tee #{create_pipe(next_pipe)}", reader: reader, writer: writer)
             block.call
           end
-        elsif
+        elsif escape
           spawn_command("tee #{create_pipe(escape)}", reader: reader, writer: writer)
         else
           fail 'No block or escape given'
         end
       end
 
-      # Sometimes we need all previous process to end before
+      # Sometimes we need the previous process to end before
       # starting new processes. The capacitor command does
       # exactly that.
       def spawn_capacitor(charger_file = nil, reader: last_pipe, writer: next_pipe)
-        if charger_file.nil?
-          charger_file = ">#{last_pipe}"
-        end
-        fail "#{charger_file} must be a file" unless charger_file.start_with?('>')
-        spawn_command('cat', reader: reader, writer: charger_file)
-        spawn_command('cat', reader: charger_file, writer: writer)
+        fail "#{charger_file} must be a file" if charger_file && !charger_file.start_with?('>')
+        charger_file = ">#{last_pipe}" if charger_file.nil?
+        charger = Channel.new(charger_file)
+        r = Channel.new(reader)
+        w = Channel.new(writer)
+        w.create
+        spawn("cat '#{r.io_name}' > '#{charger.io_name}' && cat '#{charger.io_name}' > '#{w.io_name}' && rm '#{charger.io_name}'")
       end
     end
   end

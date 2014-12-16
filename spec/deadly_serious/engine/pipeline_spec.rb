@@ -63,6 +63,37 @@ describe Pipeline do
     expect(finish - start).to be >= DELAY
   end
 
+  it 'kills all children on SIGTERM' do
+    pending 'unpredictable'
+    start = Time.now
+
+    reader, writer = IO.pipe
+    pipeline_id = fork do
+      reader.close
+      pipeline = Pipeline.new do |p|
+        p.spawn_process(TestComponentTime, DELAY)
+        p.spawn_process(TestComponentTime, DELAY)
+        p.spawn_process(TestComponentTime, DELAY)
+        p.spawn_process(TestComponentTime, DELAY)
+        writer << p.pids
+        writer.close
+      end
+      pipeline.run
+    end
+    writer.close
+    c1, c2, c3, c4 = eval(reader.readlines.first)
+    reader.close
+    expect(c1).to be_running
+    expect(c2).to be_running
+    expect(c3).to be_running
+    expect(c4).to be_running
+    Process.kill('SIGTERM', pipeline_id)
+    Process.wait(pipeline_id)
+    finish = Time.now
+    expect { Process.wait2(pipeline_id, Process::WNOHANG) }.to raise_error Errno::ECHILD
+    expect(finish - start).to be < (DELAY / 4)
+  end
+
   it 'spawns children in parallel' do
     pipeline = Pipeline.new do |p|
       p.spawn_process(TestComponentTime, DELAY)

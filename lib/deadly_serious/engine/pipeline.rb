@@ -120,13 +120,30 @@ module DeadlySerious
       end
 
       def wait_children
-        @pids.each { |pid| Process.wait(pid) }
+        # Don't wait if we have no children
+        # Thread.start do
+        #   while @pids.size > 1
+        #     @pids.each do |pid|
+        #       begin
+        #         Process.wait(pid, Process::WNOHANG)
+        #       rescue Errno::ECHILD
+        #         puts "Try delete #{pid}"
+        #         @pids.delete(pid)
+        #       end
+        #     end
+        #     sleep(0.5)
+        #   end
+        # end
+        Process.waitall
         @pids.clear
       end
 
       def kill_children
-        @pids.each { |pid| Process.kill('SIGTERM', pid) rescue nil }
-        wait_children
+        gpid = Process.gid
+        Process.kill('SIGTERM', -gpid) rescue nil
+        Timeout::timeout(5) { wait_children }
+      rescue Timeout::Error
+        Process.kill('SIGKILL', -gpid) rescue nil
       end
 
       def set_process_name(name, readers, writers)
