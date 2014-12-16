@@ -23,14 +23,14 @@ module DeadlySerious
       # the next component.
       def from_file(file_name, writer: next_pipe)
         file = file_name.sub(/^>?(.*)$/, '>\1')
-        spawn_command(%{cat ((#{file})) > ((#{writer}))})
+        spawn_command('cat', reader: file, writer: writer)
       end
 
       # Write a file to "data" dir from the pipe
       # of the last component
       def to_file(file_name, reader: last_pipe)
         file = file_name.sub(/^>?(.*)$/, '>\1')
-        spawn_command(%{cat ((#{reader})) > ((#{file}))})
+        spawn_command('cat', reader: reader, writer: file)
       end
 
       # Read from a specific named pipe.
@@ -38,7 +38,7 @@ module DeadlySerious
       # This is useful after a {#spawn_tee}, sometimes.
       def from_pipe(pipe_name, writer: next_pipe)
         pipe = pipe_name.sub(/^>?/, '')
-        spawn_command(%{cat ((#{pipe})) > ((#{writer}))})
+        spawn_command('cat', reader: pipe, writer: writer)
       end
 
       # Write the output of the last component to
@@ -49,7 +49,7 @@ module DeadlySerious
       # {#spawn_tee} instead.
       def to_pipe(pipe_name, reader: last_pipe)
         pipe = pipe_name.sub(/^>?/, '')
-        spawn_command(%{cat ((#{reader})) > ((#{pipe}))})
+        spawn_command('cat', reader: reader, writer: pipe)
       end
 
       # Spawn a class connected to the last and next components
@@ -70,43 +70,44 @@ module DeadlySerious
         spawn_process(DeadlySerious::Processes::Joiner, readers: connect_b, writers: [writer])
       end
 
+      def spawn_lambda(reader: last_pipe, writer: next_pipe, &block)
+        spawn_process(DeadlySerious::Processes::Lambda, block, readers: [reader], writers: [writer])
+      end
+
       # Pipe from the last component to a intermediate
-      # file (or pipe) while continue the process.
+      # file (or pipe) while the processe continue.
       #
       # If a block is provided, it pipes from the last
-      # component INTO the block, while it pipes to the
-      # next component OUT of the block.
+      # component INTO the block.
       def spawn_tee(escape = nil, reader: nil, writer: nil, &block)
-        # Lots of contours to make #last_pipe and and #next_pipe
-        # to work correctly.
+        # Lots of contours to make #last_pipe and
+        # #next_pipe work correctly.
         reader ||= last_pipe
-        escape ||= next_pipe
         writer ||= next_pipe
 
-        # TODO Validates if an "escape" or a block was provided
-        spawn_command(%{cat ((#{reader})) | tee ((#{escape})) > ((#{writer}))})
-
-        return unless block_given?
-        on_subnet do
-          spawn_command(%{cat ((#{escape})) > ((#{next_pipe}))})
-          block.call
+        if block_given?
+          on_subnet do
+            spawn_command("tee #{create_pipe(next_pipe)}", reader: reader, writer: writer)
+            block.call
+          end
+        elsif escape
+          spawn_command("tee #{create_pipe(escape)}", reader: reader, writer: writer)
+        else
+          fail 'No block or escape given'
         end
       end
 
-      # Sometimes we need all previous process to end before
+      # Sometimes we need the previous process to end before
       # starting new processes. The capacitor command does
       # exactly that.
       def spawn_capacitor(charger_file = nil, reader: last_pipe, writer: next_pipe)
-        if charger_file.nil?
-          charger_file = ">#{last_pipe}"
-          temp_charger = true
-        end
-        fail "#{charger_file} must be a file" unless charger_file.start_with?('>')
-        if temp_charger
-          spawn_command("cat ((#{reader})) > ((#{charger_file})); cat ((#{charger_file})) > ((#{writer})); rm ((#{charger_file}))")
-        else
-          spawn_command("cat ((#{reader})) > ((#{charger_file})); cat ((#{charger_file})) > ((#{writer}))")
-        end
+        fail "#{charger_file} must be a file" if charger_file && !charger_file.start_with?('>')
+        charger_file = ">#{last_pipe}" if charger_file.nil?
+        charger = Channel.new(charger_file)
+        r = Channel.new(reader)
+        w = Channel.new(writer)
+        w.create
+        spawn("cat '#{r.io_name}' > '#{charger.io_name}' && cat '#{charger.io_name}' > '#{w.io_name}' && rm '#{charger.io_name}'")
       end
     end
   end

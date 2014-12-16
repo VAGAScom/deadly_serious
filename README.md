@@ -2,18 +2,50 @@
 
 [![Gem Version](https://badge.fury.io/rb/deadly_serious.png)](http://badge.fury.io/rb/deadly_serious)
 
+----
+
+**Preparing version 1.0 - all interfaces are broken**
+
+----
+
 Flow Based Programming Maestro!
 
 This relies on [*named pipes*](http://linux.die.net/man/7/fifo) and *Linux processes* to create a program. Each component runs as a separate linux process and they exchange information through pipes.
 
-**REQUIRES** Ruby 2.0 and a \*nix based OS (Operating System, tested on *Ubuntu* and *Arch Linux*)
+That means it uses 'mechanical sympathy' with the Operating System, i.e., the O.S. is *part* of the program, it's not something *under* it.
 
-Unlike [NoFlo](http://noflojs.org), this is not a real engine. It just "orchestrates" linux processes and pipes to create a flow based system.
+Unlike [NoFlo](http://noflojs.org), this is not a real engine. It "orchestrates" linux processes and pipes to create flow based systems.
+
+**REQUIRES** Ruby 2.1 and a \*nix based OS (Operating System, tested on *Ubuntu* and *Arch Linux*)
+
+## Why should I care?
+
+This is a gem intended to process TONS of data in parallel, ocasionally distributed and with low memory footprint.
+
+How? Two things:
+
+1 - Data Streams, everything is connected by streams;
+2 - Operating System is _part_ of the system, it's not _under_ it.
+
+
+## How it works
+
+DeadlySerious spawns several processes connected through pipes. Each process should do a minor task, transforming or filtering data received from pipe and sending it to the next component.
+
+A "component", in this context, can be:
+
+- A class with a "#run(readers:, writers:)" method signature;
+- A lambda (several options here)
+- A shell command, like "sed", "awk", "sort", "join", etc...
+
+
+
+## Pros and Cons
 
 Overall, it's slower than a normal ruby program (the pipes add some overhead). However, there are 4 points where this approach is pretty interesting:
 
 1. High modifiabilty:
-  * The interface between each component is tiny and very clear: it's just a stream of characteres. I usually use csv format or json when I need more structure than that.
+  * The interface between each component is tiny and very clear: it's just a stream of characteres. I usually use json format when I need more structure than that.
   * You can connect ruby process to anything that deals with STDIN, STDOUT or files (which includes shell commands, of course).
 2. Cheap parallelism and distributed computation:
   * Each component runs as a separated process. The OS is in charge here (and it does an amazing work running things in parallel).
@@ -40,83 +72,63 @@ Or install it yourself as:
 
 ## Usage
 
-### Basic pipeline
+### Simple Usage
 
 Create a class that will orchestrate the pipeline:
 
 ```ruby
 #!/usr/bin/env ruby
-# Assuming your are using RVM
+require 'deadly_serious'
+include DeadlySerious::Engine
 
-class Pipeline < DeadlySerious::Engine::Spawner
-  def run_pipeline
-    # Here comes the code
-  end
+pipeline = Pipeline.new do |p|
+  p.from_file('my_data_source.json')
+  # The command "spawn_lambda" assumes a JSON format
+  p.spawn_lambda { |a, b, writer:| writer << [b, a]}
+  p.spawn_lambda { |b, a, writer:| writer << [b.upcase, a.downcase]}
+  p.to_file('my_data_sink.json')
 end
+
 
 # This line will alow you to run
 # it directly from the shell.
-#
-# Please, note that you fires the pipeline
-# calling "run" not "run_pipeline".
-Pipeline.new.run if __FILE__ == $0
+pipeline.run if __FILE__ == $0
 ```
 
-You can spawn process the following way:
+You can spawn shell commands:
 
 ```ruby
-class Pipeline < DeadlySerious::Engine::Spawner
-  def run_pipeline
+#!/usr/bin/env ruby
+require 'deadly_serious'
+include DeadlySerious::Engine
 
-    spawn_process(YourComponentClass,
-      readers: ['>an_awesome_text_file.txt'], # reads from a file
-      writers: ['your_first_output_pipe'])    # outputs to a pipe
-
-    spawn_process(YourOtherComponentClass,
-      readers: ['your_first_output_pipe'],
-      writers: ['more_pipe1', 'more_pipe2'])
-
-  end
+pipeline = Pipeline.new do |p|
+  p.from_file('my_data_source.txt')
+  p.spawn_command('grep something')
+  p.to_file('my_data_sink.txt')
 end
+
+pipeline.run if __FILE__ == $0
 ```
 
-A component is any class with a "run" method and two named parameters "readers" and "writers":
+You can spawn your own components (classes):
 
 ```ruby
-class EchoComponent
-  # "readers" and "writers" are both Array of IO objects.
-  def run(readers: [], writers: [])
-    reader = readers.first
-    writer = writers.first
+#!/usr/bin/env ruby
+require 'deadly_serious'
+include DeadlySerious::Engine
 
-    reader.each_line do |line|
-      writer << line
-    end
-  end
+pipeline = Pipeline.new do |p|
+  p.from_file('my_data_source.txt')
+  p.spawn_class(MyComponent)
+  p.to_file('my_data_sink.txt')
 end
+
+pipeline.run if __FILE__ == $0
 ```
 
-### Pipes and files
+### Components
 
-The parameters you receive in the "def run(readers: [], writers: [])" method are [**IO**](http://www.ruby-doc.org/core-2.0/IO.html) objects.
-
-They are already opened when they are passed to your component, and they are properly closed when your component is done.
-
-In the Pipeline class, readers and writers are just pipe names *or* file names. If you want to read or write to a file instead of a pipe, prepend its name with ">", like this:
-
-```ruby
-spawn_process(YourComponentClass,
-  readers: ['>an_awesome_text_file.txt'], # reads from a file
-  writers: ['your_first_output_pipe'])    # outputs to a pipe
-
-spawn_process(YourComponentClass,
-  readers: ['an_awesome_pipe'],            # reads from a pipe
-  writers: ['>your_first_output_file'])    # outputs to a file
-```
-
-Files are read and created in the "./data" directory, "." being the directory where you fired the program.
-
-Pipes are created in the '/tmp/deadly_serious/&lt;pid&gt;/' directory and they live just during the program execution. Once it's done, the directory is deleted.
 
 ### Shell commands
 
