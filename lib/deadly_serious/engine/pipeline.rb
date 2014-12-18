@@ -63,7 +63,7 @@ module DeadlySerious
         end
       end
 
-      def spawn_command(a_shell_command, reader: nil, writer: nil, readers: [], writers: [])
+      def spawn_command(a_shell_command, env: {}, reader: nil, writer: nil, readers: [], writers: [])
         input_pattern = '((<))'
         output_pattern = '((>))'
 
@@ -106,7 +106,7 @@ module DeadlySerious
                   out: outputs.size == 1 ? [outputs.first, 'w'] : :close}
 
         description = "#{tokens.first} #{in_out}"
-        @pids << fork { exec([tokens.first, description], *tokens[1..-1], in_out) }
+        @pids << fork { exec(env, [tokens.first, description], *tokens[1..-1], in_out) }
       end
 
       private
