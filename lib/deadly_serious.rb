@@ -1,7 +1,7 @@
 require 'multi_json'
 require 'fileutils'
-require 'shellwords'
 require 'deadly_serious/version'
+require 'deadly_serious/engine/process_watcher'
 require 'deadly_serious/engine/open_io'
 require 'deadly_serious/engine/json_io'
 require 'deadly_serious/engine/channel'
