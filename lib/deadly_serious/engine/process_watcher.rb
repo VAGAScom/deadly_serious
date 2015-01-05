@@ -21,9 +21,10 @@ module DeadlySerious
         # This avoid wrong status due zombie processes
         collect_status
         Process.getpgid(@pid)
-        true
       rescue Errno::ESRCH, Errno::ECHILD
         false
+      else
+        true
       end
 
       def dead?
@@ -35,6 +36,7 @@ module DeadlySerious
         fail 'Still running' if alive?
         @pid = fork &@block
       end
+      alias :call :start
 
       def finish!(timeout = 1)
         return if !started? || dead?
@@ -53,15 +55,15 @@ module DeadlySerious
         send_signal('KILL')
       end
 
+      def send_signal(signal)
+        return unless @pid
+        Process.kill(signal, @pid) rescue nil
+      end
+
       def join
         Process.waitpid(@pid) if @pid
       rescue Errno::ECHILD
         # Ignore, child finished
-      end
-
-      def send_signal(signal)
-        return unless @pid
-        Process.kill(signal, @pid) rescue nil
       end
 
       def to_s

@@ -10,6 +10,10 @@ RSpec.configure do |config|
   end
 end
 
+def touch(file_name)
+  `touch '#{file_name.gsub("'", "\\'")}'`
+end
+
 def create_file(file_name, an_array)
   open(file_name, 'w') do |f|
     an_array.each do |data|

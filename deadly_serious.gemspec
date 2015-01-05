@@ -25,4 +25,5 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'oj', '~> 2.0'
   spec.add_dependency 'multi_json', '~> 1.0'
+  spec.add_dependency 'nio4r', '~> 1.0'
 end
