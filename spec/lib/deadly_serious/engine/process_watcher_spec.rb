@@ -110,13 +110,13 @@ describe ProcessWatcher do
       finish = Time.now
       expect(finish - start).to be >= 0.25
     end
-    it 'returns immediatelly if to child process already finished' do
+    it 'returns immediatelly if child process already finished' do
       @p_time.start
       sleep 0.3
       start = Time.now
       @p_time.join
       finish = Time.now
-      expect(finish - start).to be <= 0.05
+      expect(finish - start).to be <= 0.1
     end
   end
 end
