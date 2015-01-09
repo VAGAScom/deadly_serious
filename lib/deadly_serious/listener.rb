@@ -1,17 +1,16 @@
 module DeadlySerious
   class Listener
-    def initialize(buffer_size: 4096)
+    def initialize
       @selector = NIO::Selector.new
       @monitors = []
-      @buffer = ''
-      @buffer_size = buffer_size
     end
 
-    def on_receive_from(input_io, &block)
+    def on_receive_from(input_io, buffer_size: 4096, &block)
       monitor = @selector.register(input_io, :r)
+      buffer = ''
       monitor.value = -> do
         begin
-          handle_input(monitor.io.read_nonblock(@buffer_size), block)
+          handle_input(buffer, monitor.io.read_nonblock(buffer_size), block)
         rescue EOFError
           throw :closed, input_io
         end
@@ -36,11 +35,11 @@ module DeadlySerious
 
     private
 
-    def handle_input(input, block)
-      @buffer << input
-      while match = @buffer.match(/[^\n]+\n/)
+    def handle_input(buffer, input, block)
+      buffer << input
+      while match = buffer.match(/[^\n]+\n/)
         block.call match.to_s.chomp
-        @buffer = match.post_match
+        buffer.replace(match.post_match)
       end
     end
   end

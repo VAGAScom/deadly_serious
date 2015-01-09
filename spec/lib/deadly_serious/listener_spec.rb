@@ -29,6 +29,7 @@ describe Listener do
 
     expect(parent_reader.gets.chomp).to eq 'echo: test1'
     expect(parent_reader.gets.chomp).to eq 'echo: test2'
+    parent_reader.close
 
     Process.waitpid(pid)
   end

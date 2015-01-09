@@ -10,6 +10,24 @@ module DeadlySerious
       handle_receiving
     end
 
+    def when_receive_line(&block)
+      @block = block
+    end
+
+    def listen
+      fail '#when_receive_line not called before #listen' unless @block
+      @thread = Thread.start do
+        catch :halt do
+          loop { @block.call(@io.readline) }
+        end
+      end
+    end
+
+    def join
+      fail '#listen not called before #join' unless @thread
+      @thread.join
+    end
+
     private
 
     def handle_receiving
