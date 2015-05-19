@@ -9,10 +9,14 @@ module DeadlySerious
 
       def each
         if block_given?
-          @io.each { |line| yield MultiJson.load(line) }
+          @io.each { |line| yield parse_line(line) }
         else
-          @io.lazy.map { |line| MultiJson.load(line) }
+          @io.lazy.map { |line| parse_line(line) }
         end
+      end
+
+      def parse_line(line)
+        MultiJson.load(line)
       end
 
       def <<(value)
