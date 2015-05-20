@@ -64,7 +64,7 @@ describe Pipeline do
   end
 
   it 'kills all children on SIGTERM' do
-    pending 'unpredictable'
+    pending 'too unstable do deterministic test, what to do?'
     start = Time.now
 
     reader, writer = IO.pipe
