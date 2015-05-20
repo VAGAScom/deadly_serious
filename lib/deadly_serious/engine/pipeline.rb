@@ -47,13 +47,12 @@ module DeadlySerious
         # TODO if we have no readers, and this is the first process, read from STDIN
         # TODO if we have no writers, alarm! (how about data sinks???)
         # TODO if we have no writers, and this is the last process, write to STDOUT
-        process_name ||= class_or_object.respond_to?(:name) ? class_or_object.name : class_or_object.to_s
+        the_object = Class === class_or_object ? class_or_object.new : class_or_object
+        process_name ||= the_object.respond_to?(:name) ? the_object.name : the_object.to_s
         writers.each { |writer| create_pipe(writer) }
         @pids << fork do
           begin
             set_process_name(process_name, readers, writers)
-            # TODO Change this to not modify "a_class", so we can pass instances too
-            the_object = Class === class_or_object ? class_or_object.new : class_or_object
             append_open_io_if_needed(the_object)
             the_object.run(*args, readers: readers, writers: writers)
           rescue Errno::EPIPE # Broken Pipe, no problem
