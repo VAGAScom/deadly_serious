@@ -46,6 +46,27 @@ describe Commands do
     end
   end
 
+  describe '#spawn' do
+
+    class TestTouch
+      def initialize(file)
+        @file = file
+      end
+      def run(readers:, writers:)
+        `touch #{@file}`
+      end
+    end
+
+    it 'executes an object' do
+      pipeline = Pipeline.new do |p|
+        p.spawn(TestTouch.new(test_file))
+      end
+      expect(test_file).to_not exists
+      pipeline.run
+      expect(test_file).to exists
+    end
+  end
+
   describe '#spawn_lambda' do
     it 'executes a lambda' do
       pipeline = Pipeline.new do |p|

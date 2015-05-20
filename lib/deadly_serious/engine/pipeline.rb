@@ -40,20 +40,21 @@ module DeadlySerious
       #
       # This is a basic command, use it only if you have
       # more than one input or output pipe. Otherwise
-      # prefer the simplier {DeadlySerious::Engine::Commands#spawn_class}
-      # method.
-      def spawn_process(a_class, *args, process_name: a_class.name, readers: [last_pipe], writers: [next_pipe])
+      # prefer the simpler {DeadlySerious::Engine::Commands#spawn_class} or
+      # the {DeadlySerious::Engine::Commands#spawn} methods.
+      def spawn_process(class_or_object, *args, process_name: nil, readers: [last_pipe], writers: [next_pipe])
         # TODO if we have no readers, alarm! (how about data sources???)
         # TODO if we have no readers, and this is the first process, read from STDIN
         # TODO if we have no writers, alarm! (how about data sinks???)
         # TODO if we have no writers, and this is the last process, write to STDOUT
+        process_name ||= class_or_object.respond_to?(:name) ? class_or_object.name : class_or_object.to_s
         writers.each { |writer| create_pipe(writer) }
         @pids << fork do
           begin
             set_process_name(process_name, readers, writers)
             # TODO Change this to not modify "a_class", so we can pass instances too
-            append_open_io_if_needed(a_class)
-            the_object = a_class.new
+            the_object = Class === class_or_object ? class_or_object.new : class_or_object
+            append_open_io_if_needed(the_object)
             the_object.run(*args, readers: readers, writers: writers)
           rescue Errno::EPIPE # Broken Pipe, no problem
             # Ignore
@@ -111,8 +112,10 @@ module DeadlySerious
 
       private
 
-      def append_open_io_if_needed(a_class)
-        a_class.send(:prepend, OpenIo) unless a_class.include?(OpenIo)
+      def append_open_io_if_needed(an_object)
+        class << an_object
+          prepend OpenIo
+        end
       end
 
       def create_pipe(pipe_name)
@@ -147,11 +150,7 @@ module DeadlySerious
       end
 
       def set_process_name(name, readers, writers)
-        $0 = "ruby #{self.class.dasherize(name)} <(#{readers.join(' ')}) >(#{writers.join(' ')})"
-      end
-
-      def self.dasherize(a_string)
-        a_string.gsub(/(.)([A-Z])/, '\1-\2').downcase.gsub(/\W+/, '-')
+        $0 = format('(%s)-->[%s]-->(%s)', readers.join(', '), name, writers.join(' '))
       end
     end
   end

@@ -52,6 +52,11 @@ module DeadlySerious
         spawn_command('cat', reader: reader, writer: pipe)
       end
 
+      # Spawn an object connected to the last and next components
+      def spawn(an_object, reader: last_pipe, writer: next_pipe)
+        spawn_process(an_object, readers: [reader], writers: [writer])
+      end
+
       # Spawn a class connected to the last and next components
       def spawn_class(a_class, *args, reader: last_pipe, writer: next_pipe)
         spawn_process(a_class, *args, readers: [reader], writers: [writer])
@@ -75,7 +80,7 @@ module DeadlySerious
       end
 
       # Pipe from the last component to a intermediate
-      # file (or pipe) while the processe continue.
+      # file (or pipe) while the processes continue.
       #
       # If a block is provided, it pipes from the last
       # component INTO the block.
