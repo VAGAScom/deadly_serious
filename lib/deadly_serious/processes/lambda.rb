@@ -6,8 +6,8 @@ module DeadlySerious
         writer_param = params.any? { |(k, n)| k == :keyreq && n == :writer }
         reader_param = params.any? { |(k, n)| k == :keyreq && n == :reader }
 
-        reader = JsonIo.new(readers.first) if readers.size == 1 && File.exist?(readers.first.filename)
-        writer = JsonIo.new(writers.first) if writers.size == 1 && File.exist?(writers.first.filename)
+        reader = JsonIo.new(readers.first) if readers.size == 1
+        writer = JsonIo.new(writers.first) if writers.size == 1
 
         if reader_param && writer_param
           unless reader
@@ -25,6 +25,8 @@ module DeadlySerious
           # however, it's awesomely useful. =\
           reader.each do |data|
             result = block.call(*data)
+
+            # noinspection RubySimplifyBooleanInspection
             if result == true # really TRUE, not thruthy
               # Acts as filter
               writer << data

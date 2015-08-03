@@ -92,11 +92,11 @@ module DeadlySerious
 
         if block_given?
           on_subnet do
-            spawn_command("tee #{create_pipe(next_pipe)}", reader: reader, writer: writer)
+            spawn_command("tee #{Channel.new(next_pipe, self.config).create}", reader: reader, writer: writer)
             block.call
           end
         elsif escape
-          spawn_command("tee #{create_pipe(escape)}", reader: reader, writer: writer)
+          spawn_command("tee #{Channel.new(escape, self.config).create}", reader: reader, writer: writer)
         else
           fail 'No block or escape given'
         end

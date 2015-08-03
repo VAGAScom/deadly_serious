@@ -1,7 +1,10 @@
 require 'deadly_serious'
 require 'fileutils'
-
 RSpec.configure do |config|
+
+  config.filter_run :focus => true
+  config.run_all_when_everything_filtered = true
+
   config.before(:each) do
     FileUtils.mkdir_p '/tmp/deadly_serious/'
   end

@@ -22,6 +22,10 @@ describe Pipeline do
         writer << [number * 2]
       end
     end
+
+    def inspect
+      format '%s[%d]', self.class.name, Process.pid
+    end
   end
 
   before do
@@ -63,37 +67,6 @@ describe Pipeline do
     expect(finish - start).to be >= DELAY
   end
 
-  it 'kills all children on SIGTERM' do
-    pending 'too unstable do deterministic test, what to do?'
-    start = Time.now
-
-    reader, writer = IO.pipe
-    pipeline_id = fork do
-      reader.close
-      pipeline = Pipeline.new do |p|
-        p.spawn_process(TestComponentTime, DELAY)
-        p.spawn_process(TestComponentTime, DELAY)
-        p.spawn_process(TestComponentTime, DELAY)
-        p.spawn_process(TestComponentTime, DELAY)
-        writer << p.pids
-        writer.close
-      end
-      pipeline.run
-    end
-    writer.close
-    c1, c2, c3, c4 = eval(reader.readlines.first)
-    reader.close
-    expect(c1).to be_running
-    expect(c2).to be_running
-    expect(c3).to be_running
-    expect(c4).to be_running
-    Process.kill('SIGTERM', pipeline_id)
-    Process.wait(pipeline_id)
-    finish = Time.now
-    expect { Process.wait2(pipeline_id, Process::WNOHANG) }.to raise_error Errno::ECHILD
-    expect(finish - start).to be < (DELAY / 4)
-  end
-
   it 'spawns children in parallel' do
     pipeline = Pipeline.new do |p|
       p.spawn_process(TestComponentTime, DELAY)
@@ -111,18 +84,19 @@ describe Pipeline do
   end
 
   it 'spawns linux commands' do
+    open(test_file, 'w') { |f| f.puts('line 1'); f.puts('line 2')}
     pipeline = Pipeline.new do |p|
       p.from_file(test_file)
       p.spawn_command('cat')
       p.to_file(result_file)
     end
-    expect(test_file).to_not exists
     pipeline.run
-    expect(test_file).to exists
+    expect(result_file).to exists
+    expect(File.readlines(result_file)).to eq ["line 1\n", "line 2\n"]
   end
 
   it 'connects pipes with Component Classes' do
-    create_file(test_file, [[1], [2], [3]])
+    create_file(test_file, [[1], [3], [5]])
     pipeline = Pipeline.new do |p|
       p.from_file(test_file)
       p.spawn_process(TestComponentMultiplyBy2)
@@ -130,10 +104,10 @@ describe Pipeline do
       p.to_file(result_file)
     end
     pipeline.run
-    expect(result_file).to have_content [[4], [8], [12]]
+    expect(result_file).to have_content [[4], [12], [20]]
   end
 
-  it 'connects pipes with shell commands' do
+  it 'connects pipes with shell commands'do
     create_file(test_file, [[1], [2], [3]])
     pipeline = Pipeline.new do |p|
       p.from_file(test_file)

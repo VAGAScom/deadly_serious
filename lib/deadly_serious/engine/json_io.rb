@@ -8,15 +8,8 @@ module DeadlySerious
       end
 
       def each
-        if block_given?
-          @io.each { |line| yield parse_line(line) }
-        else
-          @io.lazy.map { |line| parse_line(line) }
-        end
-      end
-
-      def parse_line(line)
-        MultiJson.load(line)
+        return enum_for(:each) unless block_given?
+        @io.each { |line| yield MultiJson.load(line) }
       end
 
       def <<(value)

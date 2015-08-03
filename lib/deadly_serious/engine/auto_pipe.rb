@@ -1,39 +1,51 @@
 class DeadlySerious::Engine::AutoPipe
-  TEMPLATE = '%s.connection.%04d'
+  TEMPLATE = 'pipe.%s'
+
+  class Counter
+    TEMPLATE = '%04d'
+
+    def initialize
+      @counter = 0
+    end
+
+    def next
+      @counter += 1
+      last
+    end
+
+    def last
+      format(TEMPLATE, @counter)
+    end
+
+    def zero?
+      @counter == 0
+    end
+  end
 
   def initialize
-    @net_id = 0
-    @connection_stack = []
-    @counter = Hash.new { |h, k| h[k.to_sym] = 0}
-  end
-
-  def on_subnet
-    @net_id += 1
-    @connection_stack << sprintf('%04d', @net_id)
-    yield
-  ensure
-    @connection_stack.pop
-  end
-
-  def net_id
-    (@connection_stack.last || 'top').to_sym
-  end
-
-  def counter
-    @counter[net_id]
+    @counters = [Counter.new]
   end
 
   def next
-    advance_counter
+    current_counter.next
     last
   end
 
   def last
-    sprintf(TEMPLATE, net_id, counter)
+    return nil if current_counter.zero?
+    format(TEMPLATE, @counters.map(&:last).join('.'))
+  end
+
+  def on_subnet
+    @counters << Counter.new
+    yield
+  ensure
+    @counters.pop
   end
 
   private
-  def advance_counter
-    @counter[net_id] += 1
+
+  def current_counter
+    @counters.last
   end
 end
