@@ -11,6 +11,7 @@ require 'deadly_serious/engine/commands'
 
 require 'deadly_serious/engine/config'
 require 'deadly_serious/engine/ruby_object_container'
+require 'deadly_serious/engine/so_command_container'
 require 'deadly_serious/engine/pipeline'
 
 # Loading all predefined processes

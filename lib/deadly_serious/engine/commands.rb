@@ -23,14 +23,14 @@ module DeadlySerious
       # the next component.
       def from_file(file_name, writer: next_pipe)
         file = file_name.sub(/^>?(.*)$/, '>\1')
-        spawn_command('cat', reader: file, writer: writer)
+        spawn_command('cat', readers: [file], writers: [writer])
       end
 
       # Write a file to "data" dir from the pipe
       # of the last component
       def to_file(file_name, reader: last_pipe)
         file = file_name.sub(/^>?(.*)$/, '>\1')
-        spawn_command('cat', reader: reader, writer: file)
+        spawn_command('cat', readers: [reader], writers: [file])
       end
 
       # Read from a specific named pipe.
@@ -38,7 +38,7 @@ module DeadlySerious
       # This is useful after a {#spawn_tee}, sometimes.
       def from_pipe(pipe_name, writer: next_pipe)
         pipe = pipe_name.sub(/^>?/, '')
-        spawn_command('cat', reader: pipe, writer: writer)
+        spawn_command('cat', readers: [pipe], writers: [writer])
       end
 
       # Write the output of the last component to
@@ -49,7 +49,7 @@ module DeadlySerious
       # {#spawn_tee} instead.
       def to_pipe(pipe_name, reader: last_pipe)
         pipe = pipe_name.sub(/^>?/, '')
-        spawn_command('cat', reader: reader, writer: pipe)
+        spawn_command('cat', readers: [reader], writers: [pipe])
       end
 
       # Spawn an object connected to the last and next components
@@ -92,11 +92,11 @@ module DeadlySerious
 
         if block_given?
           on_subnet do
-            spawn_command("tee #{Channel.new(next_pipe, self.config).create}", reader: reader, writer: writer)
+            spawn_command("tee #{Channel.new(next_pipe, self.config).create}", readers: [reader], writers: [writer])
             block.call
           end
         elsif escape
-          spawn_command("tee #{Channel.new(escape, self.config).create}", reader: reader, writer: writer)
+          spawn_command("tee #{Channel.new(escape, self.config).create}", readers: [reader], writers: [writer])
         else
           fail 'No block or escape given'
         end

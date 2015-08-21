@@ -42,6 +42,7 @@ module DeadlySerious
       # prefer the simpler {DeadlySerious::Engine::Commands#spawn_class} or
       # the {DeadlySerious::Engine::Commands#spawn} methods.
       def spawn_process(class_or_object, *args, process_name: nil, readers: [last_pipe], writers: [next_pipe])
+        writers.compact.each { |w| Channel.new(w, @config).create }
         @pids << fork do
           begin
             container = RubyObjectContainer.new(class_or_object,
@@ -60,49 +61,21 @@ module DeadlySerious
         end
       end
 
-      def spawn_command(a_shell_command, env: {}, reader: nil, writer: nil, readers: [], writers: [])
-        input_pattern = '((<))'
-        output_pattern = '((>))'
-
-        if reader.nil? && readers.empty?
-          readers << last_pipe
-        elsif reader && readers.empty?
-          readers << reader
-        end
-
-        if writer.nil? && writers.empty?
-          writers << next_pipe
-        elsif writer && writers.empty?
-          writers << writer
-        end
-
-        inputs = readers.compact.map { |it| Channel.new(it, @config).create }
-        outputs = writers.compact.map { |it| Channel.new(it, @config).create }
-
-        shell_tokens = case a_shell_command
-                         when Array
-                           a_shell_command
-                         else
-                           a_shell_command.to_s.split(/\s+/)
-                       end
-
-        tokens = shell_tokens.map do |token|
-          case token
-            when input_pattern
-              inputs.shift || fail('Missing reader')
-            when output_pattern
-              outputs.shift || fail('Missing writer')
-            else
-              token.to_s
+      def spawn_command(a_shell_command, env: {}, readers: [last_pipe], writers: [next_pipe])
+        writers.compact.each { |w| Channel.new(w, @config).create }
+        @pids << fork do
+          begin
+            container = SoCommandContainer.new(a_shell_command,
+                                               env,
+                                               @config,
+                                               readers.compact,
+                                               writers.compact)
+            set_process_name(container.name)
+            container.run
+          rescue Errno::EPIPE # Broken Pipe, no problem
+            # Ignore
           end
         end
-
-        in_out = {close_others: true,
-                  in: inputs.size == 1 ? [inputs.first, 'r'] : :close,
-                  out: outputs.size == 1 ? [outputs.first, 'w'] : :close}
-
-        description = "#{tokens.first} #{in_out}"
-        @pids << fork { exec(env, [tokens.first, description], *tokens[1..-1], in_out) }
       end
 
       private
