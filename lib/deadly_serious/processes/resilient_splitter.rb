@@ -19,7 +19,7 @@ module DeadlySerious
               outputs = writers.dup
             end
             current = outputs.first
-            current << line
+            current << line << "\n"
             outputs.rotate!
           rescue Errno::EPIPE => e
             puts e.inspect

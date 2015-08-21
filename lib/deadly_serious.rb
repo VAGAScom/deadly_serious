@@ -1,6 +1,7 @@
 require 'multi_json'
 require 'fileutils'
 require 'rb-inotify'
+require 'rbczmq'
 require 'deadly_serious/version'
 require 'deadly_serious/engine/file_monitor'
 require 'deadly_serious/engine/json_io'

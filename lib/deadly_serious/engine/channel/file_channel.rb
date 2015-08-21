@@ -1,11 +1,13 @@
 module DeadlySerious
   module Engine
     class FileChannel
+      include Enumerable
+
       attr_reader :io_name
 
       def self.new_if_match(name, config)
         matcher = name.match(/\A>(.*?)\z/)
-        new(matcher[1], config.data_dir) if matcher
+        self.new(matcher[1], config.data_dir) if matcher
       end
 
       def initialize(name, directory)
@@ -20,7 +22,7 @@ module DeadlySerious
 
       def each
         return enum_for(:each) unless block_given?
-        existing_file = FileMonitor.new(@io_name).wait_file_creation
+        existing_file = FileMonitor.new(@io_name).wait_creation
         open(existing_file, 'r') { |file| file.each_line { |line| yield line } }
       end
 

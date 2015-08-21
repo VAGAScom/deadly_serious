@@ -22,14 +22,20 @@ module DeadlySerious
 
       def each
         return enum_for(:each) unless block_given?
-        existing_file = FileMonitor.new(@io_name).wait_file_creation
+        existing_file = FileMonitor.new(@io_name).wait_creation
         open(existing_file, 'r') { |file| file.each_line { |line| yield line } }
       end
 
       def <<(data)
+        retries = 3
         @writer ||= begin
           create
-          open(@io_name, 'w')
+          open(@io_name, File::WRONLY | File::NONBLOCK)
+        rescue Errno::ENXIO
+          raise if retries <= 0
+          sleep 0.5
+          retries -= 1
+          retry
         end
         @writer.print(data)
         self
@@ -45,11 +51,16 @@ module DeadlySerious
 
       def create
         # Redirecting to /dev/null when we test the
-        # file existence it but STILL tries to create
+        # file existence. It STILL tries to create
         # the pipe due concurrency :(
         # Not good >_<
         `mkfifo '#{@io_name}' 2>/dev/null` unless File.exist?(@io_name)
         @io_name
+      end
+
+      private
+
+      def retries(times = 3, sleep = 0.5)
       end
     end
   end

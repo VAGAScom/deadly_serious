@@ -26,4 +26,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'oj', '~> 2.0'
   spec.add_dependency 'multi_json', '~> 1.0'
   spec.add_dependency 'rb-inotify', '~> 0.9', '>= 0.9.5'
+  spec.add_dependency 'rbczmq', '~> 1.7', '>= 1.7.9'
 end
