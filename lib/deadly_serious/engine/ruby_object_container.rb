@@ -18,8 +18,8 @@ module DeadlySerious
         writers = @writer_names.map { |w| Channel.new(w, @config) }
         @the_object.run(*@args, readers: readers, writers: writers)
       ensure
-        writers.each { |w| w.close }
-        readers.each { |r| r.close }
+        writers.each { |w| w.close if w } if writers
+        readers.each { |r| r.close if r } if readers
       end
 
       def finalize

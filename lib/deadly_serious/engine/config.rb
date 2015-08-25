@@ -9,6 +9,24 @@ module DeadlySerious
         @preserve_pipe_dir = preserve_pipe_dir
       end
 
+      def file_path_for(name)
+        path_for(data_dir, name)
+      end
+
+      def pipe_path_for(name)
+        path_for(pipe_dir, name)
+      end
+
+      def path_for(directory, name)
+        if name =~ /^\//
+          # Absolute file path
+          name
+        else
+          # relative file path (relative to data_dir)
+          File.join(directory, name)
+        end
+      end
+
       def setup
         create_data_dir
         create_pipe_dir

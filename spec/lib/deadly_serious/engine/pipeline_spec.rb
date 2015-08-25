@@ -1,6 +1,7 @@
 require 'spec_helper'
 require 'fileutils'
 include DeadlySerious::Engine
+include DeadlySerious::Processes
 
 describe Pipeline do
   DELAY = 0.5 # seconds
@@ -13,13 +14,17 @@ describe Pipeline do
     end
   end
 
-  class TestComponentMultiplyBy2
+  class TestComponentMultiplier
+    def initialize(multi)
+      @multi = multi
+    end
+
     def run(readers:, writers:)
       reader = JsonIo.new(readers.first)
       writer = JsonIo.new(writers.first)
 
       reader.each do |(number)|
-        writer << [number * 2]
+        writer << [number * @multi]
       end
     end
 
@@ -99,8 +104,8 @@ describe Pipeline do
     create_file(test_file, [[1], [3], [5]])
     pipeline = Pipeline.new do |p|
       p.from_file(test_file)
-      p.spawn_process(TestComponentMultiplyBy2)
-      p.spawn_process(TestComponentMultiplyBy2)
+      p.spawn_process(TestComponentMultiplier.new(2))
+      p.spawn_process(TestComponentMultiplier.new(2))
       p.to_file(result_file)
     end
     pipeline.run
@@ -117,5 +122,23 @@ describe Pipeline do
     end
     pipeline.run
     expect(result_file).to have_content [['_1_'], ['_2_'], ['_3_']]
+  end
+
+  it 'parallelize things' do
+    create_file(test_file, (1..10_000).map { |i| [i] })
+    pipeline = Pipeline.new do |p|
+      p.from_file(test_file)
+      p.spawn_process(Converter.new, writers: ['>{localhost:5555'])
+      p.spawn_process(TestComponentMultiplier.new(10), readers: ['<{localhost:5555'], writers: ['>}localhost:5556'])
+      p.spawn_process(TestComponentMultiplier.new(100), readers: ['<{localhost:5555'], writers: ['>}localhost:5556'])
+      p.spawn_process(TestComponentMultiplier.new(1000), readers: ['<{localhost:5555'], writers: ['>}localhost:5556'])
+      p.spawn_process(Converter.new, readers: ['<}localhost:5556'])
+      p.to_file(result_file)
+    end
+    pipeline.run
+    lines = IO.readlines(result_file)
+    expect(lines.size).to eq 10_000
+    expect(lines).to include("[10]\n") | include("[100]\n") | include("[1000]\n")
+    expect(lines).to include("[100000]\n") | include("[1000000]\n") | include("[10000000]\n")
   end
 end

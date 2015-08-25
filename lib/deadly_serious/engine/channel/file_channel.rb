@@ -3,34 +3,25 @@ module DeadlySerious
     class FileChannel
       include Enumerable
 
+      REGEXP = /\A>(.*?)\z/
+
       attr_reader :io_name
 
-      def self.new_if_match(name, config)
-        matcher = name.match(/\A>(.*?)\z/)
-        self.new(matcher[1], config.data_dir) if matcher
+      def self.of_type(name)
+        self if name.match(REGEXP)
       end
 
-      def initialize(name, directory)
-        if name =~ /^\//
-          # Absolute file path
-          @io_name = name
-        else
-          # relative file path (relative to data_dir)
-          @io_name = File.join(directory, name)
-        end
+      def initialize(name, config)
+        @io_name = self.class.io_name_for(name, config)
       end
 
       def each
         return enum_for(:each) unless block_given?
-        existing_file = FileMonitor.new(@io_name).wait_creation
-        open(existing_file, 'r') { |file| file.each_line { |line| yield line } }
+        open(io_name, 'r') { |file| file.each_line { |line| yield line } }
       end
 
       def <<(data)
-        @writer ||= begin
-          create
-          open(@io_name, 'w')
-        end
+        @writer ||= open(@io_name, 'w')
         @writer.print(data)
         self
       end
@@ -43,9 +34,16 @@ module DeadlySerious
         @writer.close if @writer
       end
 
-      def create
-        `touch '#{@io_name}'` unless File.exist?(@io_name)
-        @io_name
+      def self.io_name_for(name, config)
+        matcher = name.match(REGEXP)
+        file_name = matcher[1]
+        config.file_path_for(file_name)
+      end
+
+      def self.create(name, config)
+        io_name = io_name_for(name, config)
+        `touch '#{io_name}'` unless File.exist?(io_name)
+        io_name
       end
     end
   end

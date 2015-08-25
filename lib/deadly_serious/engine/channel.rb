@@ -15,10 +15,11 @@ module DeadlySerious
     # name = '!xxx:999' # 0MQueue
     module Channel
       def self.new(name, config)
-        CHANNELS.each do |channel|
-          ch = channel.new_if_match(name, config)
-          return ch if ch
-        end
+        of_type(name).new(name, config)
+      end
+
+      def self.of_type(name)
+        CHANNELS.map { |channel| channel.of_type(name) }.compact.first
       end
     end
   end

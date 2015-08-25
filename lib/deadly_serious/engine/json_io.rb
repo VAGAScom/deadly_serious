@@ -15,9 +15,9 @@ module DeadlySerious
       def <<(value)
         case value
           when Hash
-            @io << MultiJson.dump(value) << "\n"
+            @io << "#{MultiJson.dump(value)}\n"
           else
-            @io << MultiJson.dump(Array(value)) << "\n"
+            @io << "#{MultiJson.dump(Array(value))}\n"
         end
       end
 
