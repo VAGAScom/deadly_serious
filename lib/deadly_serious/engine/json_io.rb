@@ -9,7 +9,7 @@ module DeadlySerious
 
       def each
         return enum_for(:each) unless block_given?
-        @io.each { |line| yield MultiJson.load(line) }
+        @io.each { |line| yield parse(line) }
       end
 
       def <<(value)
@@ -23,6 +23,15 @@ module DeadlySerious
 
       def flush
         @io.flush
+      end
+
+      private
+      def parse(line)
+        MultiJson.load(line)
+      rescue MultiJson::ParseError
+        puts 'Error in parse'
+        puts line
+        raise
       end
     end
   end

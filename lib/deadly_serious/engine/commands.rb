@@ -2,6 +2,7 @@ module DeadlySerious
   module Engine
     # Commands make work with Pipelines easier.
     module Commands
+      MQUEUE_START_PORT = 13500
 
       private def auto_pipe
         @auto_pipe ||= AutoPipe.new
@@ -23,7 +24,7 @@ module DeadlySerious
       # the next component.
       def from_file(file_name, writer: next_pipe)
         file = file_name.sub(/^>?(.*)$/, '>\1')
-        spawn_command('cat', readers: [file], writers: [writer])
+        spawn_command('cat ((<))', readers: [file], writers: [writer])
       end
 
       # Write a file to "data" dir from the pipe
@@ -65,6 +66,7 @@ module DeadlySerious
       # Spawn {number_of_processes} classes, one process for each of them.
       # Also, it divides the previous pipe in {number_of_processes} pipes,
       # an routes data through them.
+      # @deprecated
       def spawn_class_parallel(number_of_processes, class_name, *args, reader: last_pipe, writer: next_pipe)
         connect_a = (1..number_of_processes).map { |i| sprintf('%s.%da.splitter', class_name.to_s.downcase.gsub(/\W+/, '_'), i) }
         connect_b = (1..number_of_processes).map { |i| sprintf('%s.%db.splitter', class_name.to_s.downcase.gsub(/\W+/, '_'), i) }
@@ -115,6 +117,23 @@ module DeadlySerious
         w = Channel.new(writer)
         w.create
         spawn("cat '#{r.io_name}' > '#{charger.io_name}' && cat '#{charger.io_name}' > '#{w.io_name}' && rm '#{charger.io_name}'")
+      end
+
+      # Distribute data to "number_of_lanes" sub pipelines
+      def parallel(number_of_lanes, reader: last_pipe, writer: next_pipe)
+        @port ||= MQUEUE_START_PORT
+        ventilator = format('>{localhost:%d', @port)
+        input = format('<{localhost:%d', @port)
+        @port += 1
+        sink = format('<}localhost:%d', @port)
+        output = format('>}localhost:%d', @port)
+        @port += 1
+
+        spawn(Processes::Converter.new, reader: reader, writer: ventilator)
+        spawn(Processes::Converter.new, reader: sink, writer: writer)
+        on_subnet do
+          number_of_lanes.times { yield input, output }
+        end
       end
     end
   end

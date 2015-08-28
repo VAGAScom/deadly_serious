@@ -9,8 +9,10 @@ module DeadlySerious
         @env = env
         @readers = reader_names.map { |r| Channel.of_type(r).io_name_for(r, config) }
         @writers = writer_names.map { |w| Channel.of_type(w).io_name_for(w, config) }
-        @name = Array(a_shell_command).join(' ')
         @tokens = prepare_command(a_shell_command)
+        @name = @tokens.first +
+            @readers.map { |it| " <#{it}" }.join('') +
+            @writers.map { |it| " >#{it}" }.join('')
       end
 
       def run
