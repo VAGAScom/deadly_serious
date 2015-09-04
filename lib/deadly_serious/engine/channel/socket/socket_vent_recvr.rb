@@ -19,8 +19,8 @@ module DeadlySerious
         return enum_for(:each) unless block_given?
         @minion.send('') # I'm ready!
         while (msg = @minion.recv) != END_MSG
-          @minion.send('') # More msg, pls!
           yield msg
+          @minion.send('') # More msg, pls!
         end
       end
 
