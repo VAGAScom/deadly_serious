@@ -72,6 +72,15 @@ describe Pipeline do
     expect(finish - start).to be >= DELAY
   end
 
+  it 'kills children' do
+    pipeline = Pipeline.new do |p|
+      p.spawn_process(TestComponentTime, DELAY)
+      p.clean_suicide
+      p.spawn_process(TestComponentTime, DELAY)
+    end
+    expect { pipeline.run }.not_to raise_error
+  end
+
   it 'spawns children in parallel' do
     pipeline = Pipeline.new do |p|
       p.spawn_process(TestComponentTime, DELAY)

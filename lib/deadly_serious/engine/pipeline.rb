@@ -10,7 +10,9 @@ module DeadlySerious
                      preserve_pipe_dir: false,
                      &block)
 
-        @config = Config.new(data_dir: data_dir, pipe_dir: pipe_dir, preserve_pipe_dir: preserve_pipe_dir)
+        @config = DeadlySerious::Engine::Config.new(data_dir: data_dir,
+                                                    pipe_dir: pipe_dir,
+                                                    preserve_pipe_dir: preserve_pipe_dir)
         @block = block
         @pids = []
       end
@@ -19,9 +21,9 @@ module DeadlySerious
         @config.setup
         @block.call(self)
         wait_children
-      rescue => e
-        kill_children
-        raise e
+      rescue
+        clean_suicide
+        raise
       ensure
         @config.teardown if @config
       end
@@ -78,19 +80,20 @@ module DeadlySerious
         end
       end
 
+      def clean_suicide
+        @pids ||= [] # Avoid stupid errors
+        @pids.each { |pid| Process.kill('SIGTERM', pid) rescue nil }
+        Timeout::timeout(5) { wait_children }
+      rescue Timeout::Error
+        @pids.each { |pid| Process.kill('SIGKILL', pid) rescue nil }
+      ensure
+        @pids.clear
+      end
+
       private
 
       def wait_children
         Process.waitall
-      end
-
-      def kill_children
-        gpid = Process.gid
-        Process.kill('SIGTERM', -gpid) rescue nil
-        Timeout::timeout(5) { wait_children }
-        @pids.clear
-      rescue Timeout::Error
-        Process.kill('SIGKILL', -gpid) rescue nil
       end
 
       def set_process_name(name)

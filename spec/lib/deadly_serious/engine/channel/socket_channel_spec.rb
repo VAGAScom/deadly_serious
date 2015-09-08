@@ -3,9 +3,10 @@ include DeadlySerious::Engine
 
 describe SocketChannel do
   let(:test_config) do
-    Config.new(data_dir: "/tmp/test_deadly_serious#{Process.pid}",
-               pipe_dir: "/tmp/test_deadly_serious#{Process.pid}",
-               preserve_pipe_dir: false)
+    # Conflicts with RbConfig in < 2.1
+    DeadlySerious::Engine::Config.new(data_dir: "/tmp/test_deadly_serious#{Process.pid}",
+                                      pipe_dir: "/tmp/test_deadly_serious#{Process.pid}",
+                                      preserve_pipe_dir: false)
   end
 
   matcher :produce_a do |expected|
