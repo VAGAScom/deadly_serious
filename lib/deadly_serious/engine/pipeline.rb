@@ -1,3 +1,4 @@
+require 'timeout'
 module DeadlySerious
   module Engine
     class Pipeline
