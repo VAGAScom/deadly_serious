@@ -1,5 +1,6 @@
 require 'deadly_serious'
 require 'fileutils'
+
 RSpec.configure do |config|
 
   config.filter_run :focus => true
