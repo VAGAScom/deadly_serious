@@ -79,7 +79,7 @@ module DeadlySerious
       end
 
       def spawn_lambda(name: 'Lambda',reader: last_pipe, writer: next_pipe, &block)
-        spawn(DeadlySerious::Processes::Lambda.new(block, name: name), readers: [reader], writers: [writer])
+        spawn(DeadlySerious::Processes::Lambda.new(block, name: name), reader: reader, writer: writer)
       end
 
       # Pipe from the last component to a intermediate
