@@ -19,7 +19,7 @@ module DeadlySerious
         @field_keys = @field_definition.keys
       end
 
-      def <<(data)
+      def serialize(data)
         data = @field_definition.each_with_object(['.']) do |(k, v), rslt|
           rslt << (extract(data, k))
         end
