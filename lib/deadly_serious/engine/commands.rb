@@ -39,7 +39,7 @@ module DeadlySerious
       # This is useful after a {#spawn_tee}, sometimes.
       def from_pipe(pipe_name, writer: next_pipe)
         pipe = pipe_name.sub(/^>?/, '')
-        spawn_command('cat', readers: [pipe], writers: [writer])
+        spawn_command('cat ((<))', readers: [pipe], writers: [writer])
       end
 
       # Write the output of the last component to
@@ -59,6 +59,7 @@ module DeadlySerious
       end
 
       # Spawn a class connected to the last and next components
+      # @deprecated use #spawn
       def spawn_class(a_class, *args, reader: last_pipe, writer: next_pipe)
         spawn_process(a_class, *args, readers: [reader], writers: [writer])
       end
@@ -66,7 +67,7 @@ module DeadlySerious
       # Spawn {number_of_processes} classes, one process for each of them.
       # Also, it divides the previous pipe in {number_of_processes} pipes,
       # an routes data through them.
-      # @deprecated
+      # @deprecated use #parallel
       def spawn_class_parallel(number_of_processes, class_name, *args, reader: last_pipe, writer: next_pipe)
         connect_a = (1..number_of_processes).map { |i| sprintf('%s.%da.splitter', class_name.to_s.downcase.gsub(/\W+/, '_'), i) }
         connect_b = (1..number_of_processes).map { |i| sprintf('%s.%db.splitter', class_name.to_s.downcase.gsub(/\W+/, '_'), i) }
@@ -78,7 +79,7 @@ module DeadlySerious
       end
 
       def spawn_lambda(name: 'Lambda',reader: last_pipe, writer: next_pipe, &block)
-        spawn_process(DeadlySerious::Processes::Lambda, block, process_name: name, readers: [reader], writers: [writer])
+        spawn(DeadlySerious::Processes::Lambda.new(block, name: name), reader: reader, writer: writer)
       end
 
       # Pipe from the last component to a intermediate
@@ -129,8 +130,8 @@ module DeadlySerious
         output = format('>}localhost:%d', @port)
         @port += 1
 
-        spawn(Processes::Converter.new, reader: reader, writer: ventilator)
-        spawn(Processes::Converter.new, reader: sink, writer: writer)
+        spawn_process(Processes::Converter.new, process_name: 'Ventilator', readers: [reader], writers: [ventilator])
+        spawn_process(Processes::Converter.new, process_name: 'Sink', readers: [sink], writers: [writer])
         on_subnet do
           number_of_lanes.times { yield input, output }
         end

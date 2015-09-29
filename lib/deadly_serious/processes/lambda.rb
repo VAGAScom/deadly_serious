@@ -1,8 +1,15 @@
 module DeadlySerious
   module Processes
     class Lambda
-      def run(block, readers:, writers:)
-        params = block.parameters
+      attr_reader :name
+
+      def initialize(block, name: 'Lambda')
+        @name = name
+        @block = block
+      end
+
+      def run(readers:, writers:)
+        params = @block.parameters
         writer_param = params.any? { |(k, n)| k == :keyreq && n == :writer }
         reader_param = params.any? { |(k, n)| k == :keyreq && n == :reader }
 
@@ -13,18 +20,18 @@ module DeadlySerious
           unless reader
             fail %(Missing "#{readers.first.filename}", did you provide a reader to lambda?)
           end
-          block.call(reader: reader, writer: writer)
+          @block.call(reader: reader, writer: writer)
         elsif writer_param && reader
           reader.each do |data|
-            block.call(*data, writer: writer)
+            @block.call(*data, writer: writer)
           end
         elsif writer_param && !reader
-          block.call(writer: writer)
+          @block.call(writer: writer)
         elsif reader
           # This is a little "too smarty" for my taste,
           # however, it's awesomely useful. =\
           reader.each do |data|
-            result = block.call(*data)
+            result = @block.call(*data)
 
             # noinspection RubySimplifyBooleanInspection
             if result == true # really TRUE, not thruthy
@@ -39,7 +46,7 @@ module DeadlySerious
             end
           end
         else
-          block.call
+          @block.call
         end
       end
     end
