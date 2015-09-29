@@ -1,6 +1,6 @@
 module DeadlySerious
   module Processes
-    class Converter
+    class Identity
       def run(readers: [], writers: [])
         reader = readers.first
         reader.each do |line|

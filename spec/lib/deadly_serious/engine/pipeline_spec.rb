@@ -137,11 +137,11 @@ describe Pipeline do
     create_file(test_file, (1..10_000).map { |i| [i] })
     pipeline = Pipeline.new do |p|
       p.from_file(test_file)
-      p.spawn_process(Converter.new, writers: ['>{localhost:5555'])
+      p.spawn_process(Identity.new, writers: ['>{localhost:5555'])
       p.spawn_process(TestComponentMultiplier.new(10), readers: ['<{localhost:5555'], writers: ['>}localhost:5556'])
       p.spawn_process(TestComponentMultiplier.new(100), readers: ['<{localhost:5555'], writers: ['>}localhost:5556'])
       p.spawn_process(TestComponentMultiplier.new(1000), readers: ['<{localhost:5555'], writers: ['>}localhost:5556'])
-      p.spawn_process(Converter.new, readers: ['<}localhost:5556'])
+      p.spawn_process(Identity.new, readers: ['<}localhost:5556'])
       p.to_file(result_file)
     end
     pipeline.run

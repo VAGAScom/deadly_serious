@@ -130,8 +130,8 @@ module DeadlySerious
         output = format('>}localhost:%d', @port)
         @port += 1
 
-        spawn_process(Processes::Converter.new, process_name: 'Ventilator', readers: [reader], writers: [ventilator])
-        spawn_process(Processes::Converter.new, process_name: 'Sink', readers: [sink], writers: [writer])
+        spawn_process(Processes::Identity.new, process_name: 'Ventilator', readers: [reader], writers: [ventilator])
+        spawn_process(Processes::Identity.new, process_name: 'Sink', readers: [sink], writers: [writer])
         on_subnet do
           number_of_lanes.times { yield input, output }
         end
