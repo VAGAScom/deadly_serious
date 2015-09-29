@@ -142,16 +142,23 @@ describe SocketChannel do
     end
 
     it 'does load balancing' do
-      send_msg(1, 2, 3)
+      send_msg(1, 2, 3, 4, 5)
       channel1 = Channel.new("#{rcv}localhost:5555", nil)
       channel2 = Channel.new("#{rcv}localhost:5555", nil)
 
       c1 = channel1.each
       c2 = channel2.each
 
+      # Load balancing is tuned to fast round trip.
+      # That means as soon I get a line, before I
+      #   starting process it, I ask for another one.
+      # This optimizes ZMQ, but the message order is
+      #   a bit strange, as you can check below:
       expect(c1.next).to eq '1'
-      expect(c2.next).to eq '2'
-      expect(c1.next).to eq '3'
+      expect(c2.next).to eq '3'
+      expect(c1.next).to eq '2'
+      expect(c2.next).to eq '4'
+      expect(c1.next).to eq '5'
 
       channel1.close
       channel2.close
