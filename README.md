@@ -2,13 +2,11 @@
 
 [![Gem Version](https://badge.fury.io/rb/deadly_serious.png)](http://badge.fury.io/rb/deadly_serious)
 
-----
-
-**Preparing version 1.0 - all interfaces are broken**
-
-----
-
 Flow Based Programming Maestro!
+
+This library is an implementation of the "Pipe and Filters" architecture style. It's intended for massive data processing.
+
+It has some of the [Flow Based Programming](https://en.wikipedia.org/wiki/Flow-based_programming) features and benefits. Our intention is to add more and more FBP traits as time goes.
 
 This relies on [*named pipes*](http://linux.die.net/man/7/fifo) and *Linux processes* to create a program. Each component runs as a separate linux process and they exchange information through pipes.
 
@@ -16,17 +14,13 @@ That means it uses 'mechanical sympathy' with the Operating System, i.e., the O.
 
 Unlike [NoFlo](http://noflojs.org), this is not a real engine. It "orchestrates" linux processes and pipes to create flow based systems.
 
-**REQUIRES** Ruby 2.1 and a \*nix based OS (Operating System, tested on *Ubuntu* and *Arch Linux*)
+**REQUIRES** Ruby 2.1 and a \*nix based Operating System. Tested on *Ubuntu* and *Arch Linux*.
 
 ## Why should I care?
 
 This is a gem intended to process TONS of data in parallel, ocasionally distributed and with low memory footprint.
 
-How? Two things:
-
-1 - Data Streams, everything is connected by streams;
-2 - Operating System is _part_ of the system, it's not _under_ it.
-
+It's also being used in a real system: [Mapa VAGAS de Carreiras (portuguese only)](http://www.vagas.com.br/mapa-de-carreiras/)
 
 ## How it works
 
@@ -37,12 +31,11 @@ A "component", in this context, can be:
 - A class with a "#run(readers:, writers:)" method signature;
 - A lambda (several options here)
 - A shell command, like "sed", "awk", "sort", "join", etc...
-
-
+- **Anything** that reads and writes to a file sequentially (and runs on a \*nix).
 
 ## Pros and Cons
 
-Overall, it's slower than a normal ruby program (the pipes add some overhead). However, there are 4 points where this approach is pretty interesting:
+Overall, it's slower than a normal ruby program (the serialization and deserialization pipes add some overhead). However, there are 4 points where this approach is pretty interesting:
 
 1. High modifiabilty:
   * The interface between each component is tiny and very clear: it's just a stream of characteres. I usually use json format when I need more structure than that.
@@ -50,11 +43,11 @@ Overall, it's slower than a normal ruby program (the pipes add some overhead). H
 2. Cheap parallelism and distributed computation:
   * Each component runs as a separated process. The OS is in charge here (and it does an amazing work running things in parallel).
   * As any shell command can be used as a component, you can use a simple [ncat](http://nmap.org/ncat) (or something similar) to distribute jobs between different boxes.
-  * It's really easy to avoid deadlocks and race conditions with the FBP paradigm.
+  * It's really easy to avoid deadlocks and race conditions. Actually, they are only possible if you use it in a very unusual manner.
 3. Low memory footprint
   * As each component usually process things as they appear in the pipe, it's easy to crush tons of data with very low memory. Notable exceptions as components that needs to accumulate things to process, like "sort".
 4. Very easy to reason about (personal opinion):
-  * Of course, this is not a merit of this gem, but of Flow Based Programming in general. I dare do say (oh, blasphemy!) that Object Oriented and Functional programming paradigms are good ONLY for tiny systems. They make a huge mess on big ones (#prontofalei).
+  * Of course, this is not a merit of this gem, but of Flow Based Programming in general. I dare do say (oh, blasphemy!) that Object Oriented and Functional programming paradigms are good ONLY for tiny systems (a single component). They make a huge mess on big ones (#prontofalei).
 
 ## Installation
 
@@ -74,7 +67,7 @@ Or install it yourself as:
 
 ### Simple Usage
 
-Create a class that will orchestrate the pipeline:
+Create a simple script that defines and runs a pipeline:
 
 ```ruby
 #!/usr/bin/env ruby
@@ -88,7 +81,6 @@ pipeline = Pipeline.new do |p|
   p.spawn_lambda { |b, a, writer:| writer << [b.upcase, a.downcase]}
   p.to_file('my_data_sink.json')
 end
-
 
 # This line will alow you to run
 # it directly from the shell.
@@ -120,43 +112,68 @@ include DeadlySerious::Engine
 
 pipeline = Pipeline.new do |p|
   p.from_file('my_data_source.txt')
-  p.spawn_class(MyComponent)
+  p.spawn(MyComponent.new(some_option: 123))
   p.to_file('my_data_sink.txt')
 end
 
 pipeline.run if __FILE__ == $0
 ```
 
-### Components
+### Explained
 
+The block in the pipeline creation **just define** the pipeline, it does no execute it.
+
+When we call "pipeline.run", the block is executed creating _and_ starting each component.
+
+Each component is connected to the next one (we can do define the connections by ourselves, explained later). Those connections are called "channels", they're usually pipes, but can be sockets or real files, depending on the use.
+
+When a "spawn_something" command is called, the follow steps happens:
+
+1. If the component needs a channel to write data, create or prepare the channel. If there is more than one channel, create or prepare them all.
+2. Spawns a new process with the component passing handlers to the readers and writers channels (names usually).
+3. In the subprocess, open all the channels.
+4. Call the "run" method in the component passing the open channels
+5. If the component terminates or raises error, close the channels 
+
+The components are created and started in rapid succession. When the block ends, the pipeline pauses the main process untill all the children process finalize.
+
+### Components
 
 ### Shell commands
 
 Spawning shell commands are simples as that:
 
 ```ruby
-spawn_command('cat ((>a_file_in_data_dir.csv)) | grep wabba > ((some_pipe))')
-spawn_command('cat ((some_pipe)) > ((>my_own_output_file.txt))')
-```
-
-The "((" and "))" are replaced by the actual pipe (or file) path before execution.
-
-### Preserve pipe directory and change data directory
-
-In the Pipeline class (the one you extended from Engine::Spawner), you can override the "initialize" method to pass some parameters:
-
-```ruby
-class Pipeline < DeadlySerious::Engine::Spawner
-  def initialize
-    super(
-      data_dir: './data',                             # Files directory
-      pipe_dir: "/tmp/deadly_serious/#{Process.pid}", # Pipes directory
-      preserve_pipe_dir: false)                       # Keeps the pipes directory after finish execution?
-  end
+pipeline = Pipeline.new do |p|
+  p.from_file('x1.txt')
+  p.spawn_command('cat ((<)) | grep wabba > ((>))')
+  p.spawn_command('cat ((<)) > ((>))')
+  p.to_file('x2.txt')
 end
 ```
 
-You can overwrite any of them. The ones presented above are default.
+The "((<))" is replaced by the name of the input pipe (automatically generated), the "((>))" is replaced by the name of the output pipe.
+
+You can omit both, if so, the commands use STDIN and STDOUT. The example above can be wrote as:
+
+```ruby
+pipeline = Pipeline.new do |p|
+  p.from_file('x1.txt')
+  p.spawn_command('cat | grep wabba')
+  p.spawn_command('cat')
+  p.to_file('x2.txt')
+end
+```
+
+Warning: shell commands works only with pipes! They cannot be used directly with sockets, however, it's easy to bypass that using a simple component to convert sockets to pipes and vice-versa.
+
+### Ruby components
+
+Anything class with the method "runs(readers:, writers:)" can be used as a component.
+
+### Lambda components
+
+Yet to be explained.
 
 ### JSON integration
 
